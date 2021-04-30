@@ -27,7 +27,7 @@ Features
 --------
 
 * Trinocular Camera Calibration
-* Dataset Acquisition with rectified images, depth and disparity.
+* Dataset Acquisition with rectified images, disparity and sensor depth.
 
 -----
 Usage
@@ -40,9 +40,18 @@ Perform trinocular calibration with the following command:
 
 .. code-block:: bash
 
-        oakeye trinocular calibrate -o $OUTPUT_FOLDER
+        oakeye trinocular calibrate -o $OUTPUT_FOLDER [OPTIONS]
 
-This will generate a file named ``calibration.yml`` inside the specified output folder
+
+Where ``OPTIONS`` include:
+
+- ``--input_folder PATH`` - Calibrate using previously saved images.
+- ``--board_cfg PATH`` - The board configuration file.
+- ``--device_cfg PATH`` - The device configuration file.
+- ``--scale_factor INTEGER`` - Resize the preview of the images, defaults to ``2``.
+- ``--save`` - Save also acquired images in $OUTPUT_FOLDER, defaults to ``false``.
+
+It will generate a file named ``calibration.yml`` inside $OUTPUT_FOLDER.
 
 Acquisition
 -----------
@@ -51,8 +60,17 @@ Acquire images from the sensor with the following command:
 
 .. code-block:: bash
 
-        oakeye trinocular acquire
+        oakeye trinocular acquire [OPTIONS]
 
+
+Where ``OPTIONS`` include:
+
+- ``--output_folder PATH`` - Save images in the specified folder.
+- ``--calibration PATH`` - Calibration file computed with the ``calibration`` command. If specified it will rectify the images and compute the disparities.
+- ``--device_cfg PATH`` - The device configuration file.
+- ``--scale_factor INTEGER`` - Resize the preview of the images, defaults to ``2``.
+- ``--max_depth INTEGER`` - Max value (mm) of the depth preview, defaults to ``1000``
+- ``--max_dispaity INTEGER`` - Max value of the disparities preview, defaults to ``64``
 
 
 -------
