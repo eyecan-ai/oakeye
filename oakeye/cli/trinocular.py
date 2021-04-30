@@ -13,6 +13,7 @@ from oakeye.acquirer import (
     DeviceAcquirer,
     GuiAcquirer,
     RectifiedAcquirer,
+    DisparityAcquirer,
 )
 
 
@@ -114,17 +115,33 @@ def calibrate(
 @click.option(
     "-d", "--device_cfg", type=Path, default=None, help="Path to device config file"
 )
-def rectify(calibration: Path, device_cfg: Path, output_folder: Path):
+@click.option(
+    "-s", "--scale_factor", type=int, default=2, help="Downsampling preview factor"
+)
+@click.option("-m", "--max_disparity", type=int, default=64, help="Max disparity")
+def rectify(
+    calibration: Path,
+    device_cfg: Path,
+    output_folder: Path,
+    scale_factor: int,
+    max_disparity: int,
+):
     if device_cfg is None:
         device_cfg = oakeye.data_folder / "device" / "device.yml"
     device_cfg = XConfig(device_cfg)
     device = OakDeviceFactory().create(device_cfg)
-    keys = ["left", "center", "right", "depth"]
+    keys = ["left", "center", "right", "depth", "center_left", "center_right"]
     acquirer = DeviceAcquirer(device)
     if calibration is not None:
         calib = XConfig(calibration)
         acquirer = RectifiedAcquirer(acquirer, calib)
-    acquirer = GuiAcquirer(acquirer, keys)
+        acquirer = DisparityAcquirer(acquirer, disp_diff=max_disparity)
+    acquirer = GuiAcquirer(
+        acquirer,
+        keys,
+        scale_factor=scale_factor,
+        ranges={"center_left": [0, max_disparity], "center_right": [0, max_disparity]},
+    )
     dataset = acquirer()
     device.close()
     extension = "jpg"
@@ -143,7 +160,6 @@ def rectify(calibration: Path, device_cfg: Path, output_folder: Path):
     )(dataset)
 
 
-# trinocular.add_command(store_dataset)
 trinocular.add_command(calibrate)
 trinocular.add_command(rectify)
 
