@@ -59,7 +59,7 @@ class OakDevice:
     KEY_MAPPING = {0: "center", 1: "left", 2: "right", 3: "depth"}
     REV_KEY_MAPPING = {v: k for k, v in KEY_MAPPING.items()}
 
-    def __init__(self, device: dai.Device, maxsize: int = 4) -> None:
+    def __init__(self, device: dai.Device, maxsize: int = 4, focus: int = 0) -> None:
         self._device = device
         names = self._device.getOutputQueueNames()
         self._syncing = SyncSystem([self.REV_KEY_MAPPING[x] for x in names])
@@ -73,6 +73,20 @@ class OakDevice:
 
         self._acquirer_thread = Thread(target=self._grab)
         self._acquirer_thread.start()
+
+        self._focus = focus
+
+    @property
+    def focus(self) -> int:
+        return self._focus
+
+    @focus.setter
+    def focus(self, value: int) -> None:
+        self._focus = value
+        q_control = self._device.getInputQueue(name="cam_control")
+        cam_control = dai.CameraControl()
+        cam_control.setManualFocus(value)
+        q_control.send(cam_control)
 
     def _to_sample(self, synced_packet: Dict[int, dai.ImgFrame]) -> Sample:
         sample = {self.KEY_MAPPING[k]: v.getFrame() for k, v in synced_packet.items()}
@@ -215,6 +229,5 @@ class OakDeviceFactory:
         cam_control = dai.CameraControl()
         if not cfg.autofocus:
             cam_control.setAutoFocusMode(dai.RawCameraControl.AutoFocusMode.OFF)
-            cam_control.setManualFocus(cfg.focus)
         q_control.send(cam_control)
-        return OakDevice(device)
+        return OakDevice(device, focus=cfg.focus)
