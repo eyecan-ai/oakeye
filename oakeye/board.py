@@ -1,7 +1,8 @@
-from typing import Optional, Sequence, Tuple
+from typing import Union, Sequence, Tuple
 import numpy as np
 from abc import ABC, abstractmethod
 import cv2
+from schema import Schema
 from choixe.spooks import Spook
 from oakeye.utils.color_utils import ColorUtils
 
@@ -161,7 +162,7 @@ class Board(ABC, Spook):
         return cv2.cornerSubPix(img, corners, (K, K), (-1, -1), criteria=criteria)
 
     def to_dict(self) -> dict:
-        return {"square_size": self._square_size, "pattern_size": self._pattern_size}
+        return {"square_size": self._square_size, "pattern_size": list(self._pattern_size)}
 
 
 class Chessboard(Board):
@@ -206,6 +207,16 @@ class Chessboard(Board):
             **super().to_dict(),
             "flags": self._flags,
         }
+
+    @classmethod
+    def spook_schema(cls) -> Union[None, dict]:
+        return Schema(
+            {
+                "pattern_size": [int, int],
+                "square_size": float,
+                "flags": lambda x: all([isinstance(y, str) for y in x]),
+            }
+        )
 
 
 class Charuco(Board):
@@ -269,3 +280,14 @@ class Charuco(Board):
             "marker_size": self._marker_size,
             "dictionary": self._dictionary,
         }
+
+    @classmethod
+    def spook_schema(cls) -> Union[None, dict]:
+        return Schema(
+            {
+                "pattern_size": [int, int],
+                "square_size": float,
+                "marker_size": float,
+                "dictionary": str,
+            }
+        )
