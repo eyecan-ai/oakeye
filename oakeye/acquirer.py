@@ -45,9 +45,15 @@ class Acquirer(ABC):
 
 
 class DeviceAcquirer(Acquirer):
-    def __init__(self, device: OakDevice) -> None:
+    def __init__(self, device: OakDevice, warmup: int = 10) -> None:
         super().__init__()
         self._device = device
+
+        # Manual focus has issues
+        # See https://github.com/luxonis/depthai/issues/363
+        for _ in range(warmup):
+            self._device.focus = self._device.focus
+            self._device.grab()
 
     def acquire(self) -> Sample:
         return self._device.grab()

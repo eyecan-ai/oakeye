@@ -27,7 +27,7 @@ def trinocular():
     "-i", "--input_folder", type=Path, default=None, help="Path to input folder"
 )
 @click.option(
-    "-o", "--output_folder", type=Path, default=None, help="Path to output folder"
+    "-o", "--output_folder", type=Path, required=True, help="Path to output folder"
 )
 @click.option(
     "-b", "--board_cfg", type=Path, default=None, help="Path to board config file"
@@ -49,10 +49,7 @@ def calibrate(
 ):
     acquire_corners = False
     if input_folder is None:
-        input_folder = Path("/", "tmp", "oakeye", "calibration")
         acquire_corners = True
-    if output_folder is None:
-        output_folder = input_folder
     if board_cfg is None:
         board_cfg = oakeye.data_folder / "board" / "chessboard.yml"
     if device_cfg is None:
@@ -105,9 +102,9 @@ def calibrate(
     XConfig(plain_dict=calib).save_to(output_folder / "calibration.yml")
 
 
-@click.command("rectify")
+@click.command("acquire")
 @click.option(
-    "-o", "--output_folder", type=Path, required=True, help="Path to output folder"
+    "-o", "--output_folder", type=Path, default=None, help="Path to output folder"
 )
 @click.option(
     "-c", "--calibration", type=Path, default=None, help="Path to calibration file"
@@ -118,13 +115,15 @@ def calibrate(
 @click.option(
     "-s", "--scale_factor", type=int, default=2, help="Downsampling preview factor"
 )
-@click.option("-m", "--max_disparity", type=int, default=64, help="Max disparity")
-def rectify(
+@click.option("--max_depth", type=int, default=1000, help="Max depth (mm)")
+@click.option("--max_disparity", type=int, default=64, help="Max disparity")
+def acquire(
     calibration: Path,
     device_cfg: Path,
     output_folder: Path,
     scale_factor: int,
     max_disparity: int,
+    max_depth: int,
 ):
     if device_cfg is None:
         device_cfg = oakeye.data_folder / "device" / "device.yml"
@@ -140,28 +139,33 @@ def rectify(
         acquirer,
         keys,
         scale_factor=scale_factor,
-        ranges={"center_left": [0, max_disparity], "center_right": [0, max_disparity]},
+        ranges={
+            "center_left": [0, max_disparity],
+            "center_right": [0, max_disparity],
+            "depth": [0, max_depth],
+        },
     )
     dataset = acquirer()
     device.close()
-    extension = "jpg"
-    ext_map = {
-        "left": extension,
-        "center": extension,
-        "right": extension,
-        "depth": "png",
-        "device": "yml",
-    }
-    root_files = ["device"]
-    for d in dataset:
-        d["device"] = device_cfg.to_dict()
-    UnderfolderWriter(
-        output_folder, root_files_keys=root_files, extensions_map=ext_map
-    )(dataset)
+    if output_folder is not None:
+        extension = "jpg"
+        ext_map = {
+            "left": extension,
+            "center": extension,
+            "right": extension,
+            "depth": "png",
+            "device": "yml",
+        }
+        root_files = ["device"]
+        for d in dataset:
+            d["device"] = device_cfg.to_dict()
+        UnderfolderWriter(
+            output_folder, root_files_keys=root_files, extensions_map=ext_map
+        )(dataset)
 
 
 trinocular.add_command(calibrate)
-trinocular.add_command(rectify)
+trinocular.add_command(acquire)
 
 if __name__ == "__main__":
     trinocular()
