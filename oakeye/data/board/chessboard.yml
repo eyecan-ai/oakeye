@@ -1,0 +1,8 @@
+__spook__: Chessboard
+args:
+    pattern_size: [9, 6]
+    square_size: 0.024
+    flags:
+        - CALIB_CB_ADAPTIVE_THRESH
+        - CALIB_CB_NORMALIZE_IMAGE
+        - CALIB_CB_FAST_CHECK

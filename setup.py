@@ -9,8 +9,9 @@ with open('README.rst') as readme_file:
 
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
-
-requirements = ['Click>=7.0', ]
+    
+with open('requirements.txt') as requirements_file:
+    requirements = requirements_file.readlines()
 
 setup_requirements = ['pytest-runner', ]
 
@@ -34,7 +35,7 @@ setup(
     description="oakeye",
     entry_points={
         'console_scripts': [
-            'oakeye=oakeye.cli:main',
+            'oakeye=oakeye.cli.main:cli',
         ],
     },
     install_requires=requirements,
@@ -47,7 +48,7 @@ setup(
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
-    url='https://github.com/domef/oakeye',
+    url='https://github.com/eyecan-ai/oakeye',
     version='0.1.0',
     zip_safe=False,
 )
