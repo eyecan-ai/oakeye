@@ -1,8 +1,8 @@
 depth: false
 focus: 130
 autofocus: false
-preview_size: [1280, 800]
+preview_size: [640, 400]
 resolutions:
-    left: 800p
+    left: 400p
     center: 1080p
-    right: 800p
+    right: 400p

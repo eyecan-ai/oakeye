@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from sys import flags
-from typing import Dict, Sequence
+from typing import Dict, Sequence, Tuple
 from itertools import count
 import time
 import cv2
@@ -61,14 +61,18 @@ class GuiAcquirer(Acquirer):
         quit_key: str = "q",
         acquire_key: str = "s",
         scale_factor: int = 2,
+        ranges: Dict[str, Tuple[int, int]] = None,
     ) -> None:
         super().__init__()
+        if ranges is None:
+            ranges = {}
         self._acquirer = acquirer
         self._quit_key = quit_key
         self._acquire_key = acquire_key
         self._keys = keys
         self._scale_factor = scale_factor
         self._counter = count()
+        self._ranges = ranges
 
     def _show_sample(self, sample: Sample) -> None:
         h, w = sample[self._keys[0]].shape[:2]
@@ -76,18 +80,20 @@ class GuiAcquirer(Acquirer):
         w //= self._scale_factor
         imgs = []
         for k in self._keys:
-            if not k in sample:
+            if k not in sample:
                 continue
             img = sample[k]
+            if k in self._ranges:
+                m, M = self._ranges[k]
+                img = np.clip(img, m, M)
+                img = ((img - m) / (M - m) * 255).astype(np.uint8)
+                img = cv2.applyColorMap(img, cv2.COLORMAP_INFERNO)
+
             if len(img.shape) == 3:
                 img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
             else:
-                if img.dtype == np.uint8:
-                    img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-                else:
-                    img = img // np.iinfo(img.dtype).max * 255
-                    img = img.astype(np.uint8)
-                    img = cv2.applyColorMap(img, cv2.COLORMAP_MAGMA)
+                img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+
             img = cv2.resize(img, (w, h))
             imgs.append(img)
 
@@ -142,7 +148,11 @@ class CornerAcquirer(GuiAcquirer):
 
 
 class RectifiedAcquirer(Acquirer):
-    def __init__(self, acquirer: Acquirer, calibration: Dict) -> None:
+    def __init__(
+        self,
+        acquirer: Acquirer,
+        calibration: Dict,
+    ) -> None:
         super().__init__()
         self._acquirer = acquirer
         self._calibration = calibration
@@ -188,4 +198,88 @@ class RectifiedAcquirer(Acquirer):
         sample["left"] = cv2.remap(sample["left"], *self._map_l, cv2.INTER_LINEAR)
         sample["center"] = cv2.remap(sample["center"], *self._map_c, cv2.INTER_LINEAR)
         sample["right"] = cv2.remap(sample["right"], *self._map_r, cv2.INTER_LINEAR)
+
+        return sample
+
+
+class DisparityAcquirer(Acquirer):
+    def __init__(
+        self,
+        acquirer: Acquirer,
+        disp_skip: int = 1,
+        disp_diff: int = 128,
+        disp_block_size: int = 7,
+        disp_mode: int = cv2.STEREO_SGBM_MODE_HH4,
+        disp_smooth: Tuple[int, int] = (16, 32),
+        disp12_max_diff: int = 1,
+        uniqueness_ratio: int = 10,
+    ) -> None:
+
+        super().__init__()
+        self._acquirer = acquirer
+        self._disp_diff = disp_diff
+        self._sgbm = cv2.StereoSGBM_create(
+            1,
+            self._disp_diff,
+            disp_block_size,
+            mode=disp_mode,
+            P1=disp_smooth[0],
+            P2=disp_smooth[1],
+            disp12MaxDiff=disp12_max_diff,
+            uniquenessRatio=uniqueness_ratio,
+        )
+
+        self._counter = count()
+        self._disp_skip = disp_skip
+
+        self.old_cl = None
+        self.old_cr = None
+
+    def _compute_disparity(self, sample):
+        left = sample["left"]
+        center = ColorUtils.to_gray(sample["center"])
+        right = sample["right"]
+
+        center_left = (
+            np.fliplr(
+                self._sgbm.compute(
+                    np.pad(np.fliplr(center), ((0, 0), (self._disp_diff, 0))),
+                    np.pad(np.fliplr(left), ((0, 0), (self._disp_diff, 0))),
+                )
+            )[:, self._disp_diff :]
+            / 16.0
+        )
+
+        center_right = (
+            self._sgbm.compute(
+                np.pad(center, ((0, 0), (self._disp_diff, 0))),
+                np.pad(right, ((0, 0), (self._disp_diff, 0))),
+            )[:, self._disp_diff :]
+            / 16.0
+        )
+
+        center_left = center_left.astype(np.uint16)
+        center_right = center_right.astype(np.uint16)
+
+        return center_left, center_right
+
+    def acquire(self) -> Sample:
+        sample = self._acquirer.acquire()
+        cl, cr = self._compute_disparity(sample)
+
+        if self.old_cl is None:
+            self.old_cl = np.zeros_like(sample["left"])
+            self.old_cr = np.zeros_like(sample["right"])
+
+        if next(self._counter) % self._disp_skip == 0:
+            cl, cr = self._compute_disparity(sample)
+            self.old_cl = cl
+            self.old_cr = cr
+            sample["center_left"] = cl
+            sample["center_right"] = cr
+
+        else:
+            sample["center_left"] = self.old_cl
+            sample["center_right"] = self.old_cr
+
         return sample
