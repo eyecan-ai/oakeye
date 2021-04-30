@@ -51,7 +51,7 @@ Where ``OPTIONS`` include:
 - ``--scale_factor INTEGER`` - Resize the preview of the images, defaults to ``2``.
 - ``--save`` - Save also acquired images in $OUTPUT_FOLDER, defaults to ``false``.
 
-It will generate a file named ``calibration.yml`` inside $OUTPUT_FOLDER.
+It will generate a file named ``calibration.yml`` inside ``$OUTPUT_FOLDER``.
 
 Acquisition
 -----------
