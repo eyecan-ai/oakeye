@@ -16,18 +16,46 @@ oakeye
 
 
 
-oakeye
+Oak Device calibration and acquisition tools. 
+https://opencv.org/opencv-ai-competition-2021/
 
 
 * Free software: GNU General Public License v3
-* Documentation: https://oakeye.readthedocs.io.
 
-
+--------
 Features
 --------
 
-* TODO
+* Trinocular Camera Calibration
+* Dataset Acquisition with rectified images, depth and disparity.
 
+-----
+Usage
+-----
+
+Calibration
+-----------
+
+Perform trinocular calibration with the following command:
+
+.. code-block:: bash
+
+        oakeye trinocular calibrate -o $OUTPUT_FOLDER
+
+This will generate a file named ``calibration.yml`` inside the specified output folder
+
+Acquisition
+-----------
+
+Acquire images from the sensor with the following command:
+
+.. code-block:: bash
+
+        oakeye trinocular acquire
+
+
+
+-------
 Credits
 -------
 
