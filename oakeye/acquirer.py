@@ -39,7 +39,7 @@ class Acquirer(ABC):
             elapsed = time.time() - t_start
         return samples
 
-    def __call__(self, *args, **kwargs) -> None:
+    def __call__(self, *args, **kwargs) -> Sequence[Sample]:
         return self.run(*args, **kwargs)
 
 
