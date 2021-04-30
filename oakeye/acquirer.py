@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from sys import flags
 from typing import Dict, Sequence
+from itertools import count
 import time
 import cv2
 import numpy as np
@@ -67,6 +68,7 @@ class GuiAcquirer(Acquirer):
         self._acquire_key = acquire_key
         self._keys = keys
         self._scale_factor = scale_factor
+        self._counter = count()
 
     def _show_sample(self, sample: Sample) -> None:
         h, w = sample[self._keys[0]].shape[:2]
@@ -74,12 +76,23 @@ class GuiAcquirer(Acquirer):
         w //= self._scale_factor
         imgs = []
         for k in self._keys:
+            if not k in sample:
+                continue
             img = sample[k]
-            img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+            if len(img.shape) == 3:
+                img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+            else:
+                if img.dtype == np.uint8:
+                    img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+                else:
+                    img = img // np.iinfo(img.dtype).max * 255
+                    img = img.astype(np.uint8)
+                    img = cv2.applyColorMap(img, cv2.COLORMAP_MAGMA)
             img = cv2.resize(img, (w, h))
             imgs.append(img)
+
         img = np.concatenate(imgs, 1)
-        cv2.imshow(k, img)
+        cv2.imshow("sample", img)
 
     def _parse_input(self, sample: Sample) -> Sample:
         res = None
@@ -88,6 +101,7 @@ class GuiAcquirer(Acquirer):
             self._stop()
             cv2.destroyAllWindows()
         elif c == ord(self._acquire_key) and sample is not None:
+            sample.id = next(self._counter)
             print("Saving sample #%d" % sample.id)
             res = sample
         return res

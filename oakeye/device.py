@@ -69,9 +69,10 @@ class OakDevice:
         ]
         self._stop_event = Event()
         self._buffer = Queue(maxsize=1)
+        self._counter = count()
+
         self._acquirer_thread = Thread(target=self._grab)
         self._acquirer_thread.start()
-        self._counter = count()
 
     def _to_sample(self, synced_packet: Dict[int, dai.ImgFrame]) -> Sample:
         sample = {self.KEY_MAPPING[k]: v.getFrame() for k, v in synced_packet.items()}
@@ -214,7 +215,6 @@ class OakDeviceFactory:
         cam_control = dai.CameraControl()
         if not cfg.autofocus:
             cam_control.setAutoFocusMode(dai.RawCameraControl.AutoFocusMode.OFF)
-            for i in range(10):
-                cam_control.setManualFocus(cfg.focus)
+            cam_control.setManualFocus(cfg.focus)
         q_control.send(cam_control)
         return OakDevice(device)
