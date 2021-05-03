@@ -59,7 +59,7 @@ Where ``OPTIONS`` include:
 - ``-S, --save`` - Also save acquired images in $OUTPUT_FOLDER. If not set, only the calibration
   file will be saved.
 
-Press 's' to select the images to perform calibration with, only if all the corners are visible in the three cameras they will be used for calibration.
+Press 's' to select the frames to perform calibration with, only if all the corners are visible in the three cameras they will be used for calibration.
 
 Calibration results are stored in a file named ``calibration.yml`` inside ``$OUTPUT_FOLDER``.
 
@@ -83,6 +83,6 @@ Where ``OPTIONS`` include:
 - ``--max_depth INTEGER`` - Max value (mm) of the depth preview, defaults to ``1000``
 - ``--max_disparity INTEGER`` - Max value of the disparities, defaults to ``64``
 
-Press 's' to save the images.
+Press 's' to save the frames.
 
 .. _`Pipelime`: https://github.com/eyecan-ai/pipelime
