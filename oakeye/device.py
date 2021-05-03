@@ -168,6 +168,13 @@ class OakDeviceFactory:
         center_camera.setResolution(self.RGB_CAM_RES_MAP[cfg.resolutions.center])
         center_camera.setInterleaved(True)
         center_camera.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
+        center_camera.initialControl.setManualFocus(cfg.focus)
+
+        # This may be redundant when setManualFocus is used
+        if not cfg.autofocus:
+            center_camera.initialControl.setAutoFocusMode(
+                dai.RawCameraControl.AutoFocusMode.OFF
+            )
 
         # left camera
         left_camera = pipeline.createMonoCamera()
@@ -224,10 +231,4 @@ class OakDeviceFactory:
         device.startPipeline()
         device.setLogLevel(dai.LogLevel.DEBUG)
 
-        # set focus
-        q_control = device.getInputQueue(name="cam_control")
-        cam_control = dai.CameraControl()
-        if not cfg.autofocus:
-            cam_control.setAutoFocusMode(dai.RawCameraControl.AutoFocusMode.OFF)
-        q_control.send(cam_control)
         return OakDevice(device, focus=cfg.focus)

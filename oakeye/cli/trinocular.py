@@ -67,11 +67,10 @@ def calibrate(
         dataset = acquirer()
         device.close()
         if save:
-            extension = "jpg"
             ext_map = {
-                "left": extension,
-                "center": extension,
-                "right": extension,
+                "left": "png",
+                "center": "png",
+                "right": "png",
                 "depth": "png",
                 "board": "yml",
                 "device": "yml",
@@ -129,7 +128,7 @@ def acquire(
         device_cfg = oakeye.data_folder / "device" / "device.yml"
     device_cfg = XConfig(device_cfg)
     device = OakDeviceFactory().create(device_cfg)
-    keys = ["left", "center", "right", "depth", "center_left", "center_right"]
+    keys = ["left", "center", "right", "depth", "disparityCL", "disparityCR"]
     acquirer = DeviceAcquirer(device)
     if calibration is not None:
         calib = XConfig(calibration)
@@ -140,20 +139,21 @@ def acquire(
         keys,
         scale_factor=scale_factor,
         ranges={
-            "center_left": [0, max_disparity],
-            "center_right": [0, max_disparity],
+            "disparityCL": [0, max_disparity],
+            "disparityCR": [0, max_disparity],
             "depth": [0, max_depth],
         },
     )
     dataset = acquirer()
     device.close()
     if output_folder is not None:
-        extension = "jpg"
         ext_map = {
-            "left": extension,
-            "center": extension,
-            "right": extension,
+            "left": "png",
+            "center": "png",
+            "right": "png",
             "depth": "png",
+            "disparityCL": "png",
+            "disparityCR": "png",
             "device": "yml",
         }
         root_files = ["device"]
