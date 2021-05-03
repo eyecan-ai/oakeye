@@ -246,7 +246,7 @@ class DisparityAcquirer(Acquirer):
         center = ColorUtils.to_gray(sample["center"])
         right = sample["right"]
 
-        center_left = (
+        disparityCL = (
             np.fliplr(
                 self._sgbm.compute(
                     np.pad(np.fliplr(center), ((0, 0), (self._disp_diff, 0))),
@@ -256,7 +256,7 @@ class DisparityAcquirer(Acquirer):
             / 16.0
         )
 
-        center_right = (
+        disparityCR = (
             self._sgbm.compute(
                 np.pad(center, ((0, 0), (self._disp_diff, 0))),
                 np.pad(right, ((0, 0), (self._disp_diff, 0))),
@@ -264,10 +264,10 @@ class DisparityAcquirer(Acquirer):
             / 16.0
         )
 
-        center_left = center_left.astype(np.uint16)
-        center_right = center_right.astype(np.uint16)
+        disparityCL = disparityCL.astype(np.uint16)
+        disparityCR = disparityCR.astype(np.uint16)
 
-        return center_left, center_right
+        return disparityCL, disparityCR
 
     def acquire(self) -> Sample:
         sample = self._acquirer.acquire()
@@ -281,11 +281,11 @@ class DisparityAcquirer(Acquirer):
             cl, cr = self._compute_disparity(sample)
             self.old_cl = cl
             self.old_cr = cr
-            sample["center_left"] = cl
-            sample["center_right"] = cr
+            sample["disparityCL"] = cl
+            sample["disparityCR"] = cr
 
         else:
-            sample["center_left"] = self.old_cl
-            sample["center_right"] = self.old_cr
+            sample["disparityCL"] = self.old_cl
+            sample["disparityCR"] = self.old_cr
 
         return sample
