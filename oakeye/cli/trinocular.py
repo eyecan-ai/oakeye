@@ -67,11 +67,10 @@ def calibrate(
         dataset = acquirer()
         device.close()
         if save:
-            extension = "jpg"
             ext_map = {
-                "left": extension,
-                "center": extension,
-                "right": extension,
+                "left": "jpg",
+                "center": "jpg",
+                "right": "jpg",
                 "depth": "png",
                 "board": "yml",
                 "device": "yml",
@@ -148,12 +147,13 @@ def acquire(
     dataset = acquirer()
     device.close()
     if output_folder is not None:
-        extension = "jpg"
         ext_map = {
-            "left": extension,
-            "center": extension,
-            "right": extension,
+            "left": "jpg",
+            "^center$": "jpg",
+            "right": "jpg",
             "depth": "png",
+            "center_left": "png",
+            "center_right": "png",
             "device": "yml",
         }
         root_files = ["device"]
