@@ -51,9 +51,9 @@ class DeviceAcquirer(Acquirer):
 
         # Manual focus has issues
         # See https://github.com/luxonis/depthai/issues/363
-        for _ in range(warmup):
-            self._device.focus = self._device.focus
-            self._device.grab()
+        # for _ in range(warmup):
+        #     self._device.focus = self._device.focus
+        #     self._device.grab()
 
     def acquire(self) -> Sample:
         return self._device.grab()

@@ -33,6 +33,9 @@ Features
 Usage
 -----
 
+All input and output datasets are stored using the **Underfolder** format.
+See `Pipelime`_ for more info.
+
 Calibration
 -----------
 
@@ -45,13 +48,18 @@ Perform trinocular calibration with the following command:
 
 Where ``OPTIONS`` include:
 
-- ``--input_folder PATH`` - Calibrate using previously saved images.
-- ``--board_cfg PATH`` - The board configuration file.
-- ``--device_cfg PATH`` - The device configuration file.
-- ``--scale_factor INTEGER`` - Resize the preview of the images, defaults to ``2``.
-- ``--save`` - Save also acquired images in $OUTPUT_FOLDER, defaults to ``false``.
+- ``-i, --input_folder PATH`` - Calibrate using previously saved images. If not set
+  images will be acquired live with an OpenCV GUI. Press 's' to acquire an image and 'q'
+  to perform calibration and exit.
+- ``-b, --board_cfg PATH`` - The board configuration file. If not set, a default configuration
+  located in ``oakeye/data/board/chessboard.yml`` will be used.
+- ``-d, --device_cfg PATH`` - The device configuration file. If not set, a default configuration
+  located in ``oakeye/data/device/device.yml`` will be used.
+- ``-s, --scale_factor INTEGER`` - Preview downscale factor, defaults to ``2``.
+- ``-S, --save`` - Also save acquired images in $OUTPUT_FOLDER. If not set, only the calibration
+  file will be saved.
 
-It will generate a file named ``calibration.yml`` inside ``$OUTPUT_FOLDER``.
+Calibration results are stored in a file named ``calibration.yml`` inside ``$OUTPUT_FOLDER``.
 
 Acquisition
 -----------
@@ -66,18 +74,12 @@ Acquire images from the sensor with the following command:
 Where ``OPTIONS`` include:
 
 - ``--output_folder PATH`` - Save images in the specified folder.
-- ``--calibration PATH`` - Calibration file computed with the ``calibration`` command. If specified it will rectify the images and compute the disparities.
-- ``--device_cfg PATH`` - The device configuration file.
-- ``--scale_factor INTEGER`` - Resize the preview of the images, defaults to ``2``.
+- ``--calibration PATH`` - Calibration file computed with the ``calibration`` command. 
+  If specified it will also rectify the images and compute the disparities.
+- ``--device_cfg PATH`` - The device configuration file. 
+- ``--scale_factor INTEGER`` - Preview downscale factor, defaults to ``2``.
 - ``--max_depth INTEGER`` - Max value (mm) of the depth preview, defaults to ``1000``
 - ``--max_dispaity INTEGER`` - Max value of the disparities preview, defaults to ``64``
 
 
--------
-Credits
--------
-
-This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
-
-.. _Cookiecutter: https://github.com/audreyr/cookiecutter
-.. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
+.. _`Pipelime`: https://github.com/eyecan-ai/pipelime
