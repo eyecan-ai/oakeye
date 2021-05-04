@@ -59,8 +59,6 @@ Where ``OPTIONS`` include:
 - ``-S, --save`` - Also save acquired images in $OUTPUT_FOLDER. If not set, only the calibration
   file will be saved.
 
-Press 's' to select the frames to perform calibration with, only if all the corners are visible in the three cameras they will be used for calibration.
-
 Calibration results are stored in a file named ``calibration.yml`` inside ``$OUTPUT_FOLDER``.
 
 Acquisition
@@ -75,15 +73,14 @@ Acquire images from the sensor with the following command:
 
 Where ``OPTIONS`` include:
 
-- ``--output_folder PATH`` - Save images in the specified folder.
+- ``--output_folder PATH`` - Save images in the specified folder. Press 's' to acquire an image and 'q'
+  to save and exit.
 - ``--calibration PATH`` - Calibration file computed with the ``calibration`` command. 
   If specified it will also rectify the images and compute the disparities.
 - ``--device_cfg PATH`` - The device configuration file. 
 - ``--scale_factor INTEGER`` - Preview downscale factor, defaults to ``2``.
 - ``--max_depth INTEGER`` - Max value (mm) of the depth preview, defaults to ``1000``
 - ``--max_disparity INTEGER`` - Max value of the disparities, defaults to ``64``
-
-Press 's' to save the frames.
 
 .. _`Pipelime`: https://github.com/eyecan-ai/pipelime
 
