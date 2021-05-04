@@ -86,3 +86,9 @@ Where ``OPTIONS`` include:
 Press 's' to save the frames.
 
 .. _`Pipelime`: https://github.com/eyecan-ai/pipelime
+
+----
+Note
+----
+
+If you have problems (i.e. the application crash or the camera are not synchronized) install the branch develop of depthai (https://github.com/luxonis/depthai-python).
