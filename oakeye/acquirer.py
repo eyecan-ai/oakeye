@@ -271,7 +271,6 @@ class DisparityAcquirer(Acquirer):
 
     def acquire(self) -> Sample:
         sample = self._acquirer.acquire()
-        cl, cr = self._compute_disparity(sample)
 
         if self.old_cl is None:
             self.old_cl = np.zeros_like(sample["left"])

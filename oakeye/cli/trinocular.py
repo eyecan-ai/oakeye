@@ -36,7 +36,7 @@ def trinocular():
     "-d", "--device_cfg", type=Path, default=None, help="Path to device config file"
 )
 @click.option(
-    "-s", "--scale_factor", type=int, default=2, help="Downsampling preview factor"
+    "-s", "--scale_factor", type=int, default=1, help="Downsampling preview factor"
 )
 @click.option("-S", "--save", is_flag=True, help="Also save calibration dataset")
 def calibrate(
@@ -112,7 +112,7 @@ def calibrate(
     "-d", "--device_cfg", type=Path, default=None, help="Path to device config file"
 )
 @click.option(
-    "-s", "--scale_factor", type=int, default=2, help="Downsampling preview factor"
+    "-s", "--scale_factor", type=int, default=1, help="Downsampling preview factor"
 )
 @click.option("--max_depth", type=int, default=1000, help="Max depth (mm)")
 @click.option("--max_disparity", type=int, default=64, help="Max disparity")
