@@ -3,15 +3,15 @@ oakeye
 ======
 
 
-.. image:: https://img.shields.io/pypi/v/oakeye.svg
-        :target: https://pypi.python.org/pypi/oakeye
+.. .. image:: https://img.shields.io/pypi/v/oakeye.svg
+..         :target: https://pypi.python.org/pypi/oakeye
 
-.. image:: https://img.shields.io/travis/domef/oakeye.svg
-        :target: https://travis-ci.com/domef/oakeye
+.. .. image:: https://img.shields.io/travis/domef/oakeye.svg
+..         :target: https://travis-ci.com/domef/oakeye
 
-.. image:: https://readthedocs.org/projects/oakeye/badge/?version=latest
-        :target: https://oakeye.readthedocs.io/en/latest/?version=latest
-        :alt: Documentation Status
+.. .. image:: https://readthedocs.org/projects/oakeye/badge/?version=latest
+..         :target: https://oakeye.readthedocs.io/en/latest/?version=latest
+..         :alt: Documentation Status
 
 
 
