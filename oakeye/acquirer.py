@@ -66,6 +66,7 @@ class GuiAcquirer(Acquirer):
         keys: Sequence[str],
         quit_key: str = "q",
         acquire_key: str = "s",
+        start_key: str = "b",
         scale_factor: int = 2,
         ranges: Dict[str, Tuple[int, int]] = None,
     ) -> None:
@@ -75,10 +76,12 @@ class GuiAcquirer(Acquirer):
         self._acquirer = acquirer
         self._quit_key = quit_key
         self._acquire_key = acquire_key
+        self._start_key = start_key
         self._keys = keys
         self._scale_factor = scale_factor
         self._counter = count()
         self._ranges = ranges
+        self._recording = False
 
     def _show_sample(self, sample: Sample) -> None:
         h, w = sample[self._keys[0]].shape[:2]
@@ -108,11 +111,16 @@ class GuiAcquirer(Acquirer):
 
     def _parse_input(self, sample: Sample) -> Sample:
         res = None
+        acquire_this = False
         c = cv2.waitKey(1)
         if c == ord(self._quit_key):
             self._stop()
             cv2.destroyAllWindows()
         elif c == ord(self._acquire_key) and sample is not None:
+            acquire_this = True
+        elif c == ord(self._start_key) and not self._recording:
+            self._recording = True
+        if self._recording or acquire_this:
             sample.id = next(self._counter)
             print("Saving sample #%d" % sample.id)
             res = sample

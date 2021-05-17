@@ -114,15 +114,19 @@ def calibrate(
 @click.option(
     "-s", "--scale_factor", type=int, default=1, help="Downsampling preview factor"
 )
+@click.option("--disparity", is_flag=True, help="Also acquire disparity")
 @click.option("--max_depth", type=int, default=1000, help="Max depth (mm)")
 @click.option("--max_disparity", type=int, default=64, help="Max disparity")
+@click.option("--max_frames", type=int, default=-1, help="Max number of frames")
 def acquire(
     calibration: Path,
     device_cfg: Path,
     output_folder: Path,
     scale_factor: int,
+    disparity: bool,
     max_disparity: int,
     max_depth: int,
+    max_frames: int,
 ):
     if device_cfg is None:
         device_cfg = oakeye.data_folder / "device" / "device.yml"
@@ -133,6 +137,7 @@ def acquire(
     if calibration is not None:
         calib = XConfig(calibration)
         acquirer = RectifiedAcquirer(acquirer, calib)
+    if disparity:
         acquirer = DisparityAcquirer(acquirer, disp_diff=max_disparity)
     acquirer = GuiAcquirer(
         acquirer,
@@ -144,7 +149,7 @@ def acquire(
             "depth": [0, max_depth],
         },
     )
-    dataset = acquirer()
+    dataset = acquirer(max_frames=max_frames)
     device.close()
     if output_folder is not None:
         ext_map = {
