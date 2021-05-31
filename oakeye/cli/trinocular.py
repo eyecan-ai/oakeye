@@ -118,6 +118,7 @@ def calibrate(
 @click.option("--max_depth", type=int, default=1000, help="Max depth (mm)")
 @click.option("--max_disparity", type=int, default=64, help="Max disparity")
 @click.option("--max_frames", type=int, default=-1, help="Max number of frames")
+@click.option("--skip", type=int, default=1, help="Skip frames")
 def acquire(
     calibration: Path,
     device_cfg: Path,
@@ -127,6 +128,7 @@ def acquire(
     max_disparity: int,
     max_depth: int,
     max_frames: int,
+    skip: int,
 ):
     if device_cfg is None:
         device_cfg = oakeye.data_folder / "device" / "device.yml"
@@ -149,7 +151,7 @@ def acquire(
             "depth": [0, max_depth],
         },
     )
-    dataset = acquirer(max_frames=max_frames)
+    dataset = acquirer(max_frames=max_frames, skip=skip)
     device.close()
     if output_folder is not None:
         ext_map = {
