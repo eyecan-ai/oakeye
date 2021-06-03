@@ -36,6 +36,13 @@ def trinocular():
     "-d", "--device_cfg", type=Path, default=None, help="Path to device config file"
 )
 @click.option(
+    "-r",
+    "--rectification",
+    type=Path,
+    default=None,
+    help="Path to calibration config file to calibrate with rectified images, works only with new acquired images",
+)
+@click.option(
     "-s", "--scale_factor", type=int, default=1, help="Downsampling preview factor"
 )
 @click.option("-S", "--save", is_flag=True, help="Also save calibration dataset")
@@ -44,6 +51,7 @@ def calibrate(
     output_folder: Path,
     board_cfg: Path,
     device_cfg: Path,
+    rectification: Path,
     scale_factor: int,
     save: bool,
 ):
@@ -61,9 +69,11 @@ def calibrate(
         device_cfg = XConfig(device_cfg)
         device = OakDeviceFactory().create(device_cfg)
         keys = ["left", "center", "right"]
-        acquirer = CornerAcquirer(
-            DeviceAcquirer(device), keys, board, scale_factor=scale_factor
-        )
+        acquirer = DeviceAcquirer(device)
+        if rectification is not None:
+            calib = XConfig(filename=rectification)
+            acquirer = RectifiedAcquirer(acquirer, calib)
+        acquirer = CornerAcquirer(acquirer, keys, board, scale_factor=scale_factor)
         dataset = acquirer()
         device.close()
         if save:

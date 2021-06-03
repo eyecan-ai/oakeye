@@ -55,6 +55,8 @@ Where ``OPTIONS`` include:
   located in ``oakeye/data/board/chessboard.yml`` will be used.
 - ``-d, --device_cfg PATH`` - The device configuration file. If not set, a default configuration
   located in ``oakeye/data/device/device.yml`` will be used.
+- ``-r, --rectification PATH`` - A calibration file. If set, the calibration will be performed
+  on rectified images. Works only with new acquired images (i.e. it doesn't work if ``-i`` is set).
 - ``-s, --scale_factor INTEGER`` - Preview downscale factor, defaults to ``2``.
 - ``-S, --save`` - Also save acquired images in $OUTPUT_FOLDER. If not set, only the calibration
   file will be saved.
