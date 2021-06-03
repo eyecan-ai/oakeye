@@ -36,6 +36,13 @@ def trinocular():
     "-d", "--device_cfg", type=Path, default=None, help="Path to device config file"
 )
 @click.option(
+    "-r",
+    "--rectification",
+    type=Path,
+    default=None,
+    help="Path to calibration config file to calibrate with rectified images, works only with new acquired images",
+)
+@click.option(
     "-s", "--scale_factor", type=int, default=1, help="Downsampling preview factor"
 )
 @click.option("-S", "--save", is_flag=True, help="Also save calibration dataset")
@@ -44,6 +51,7 @@ def calibrate(
     output_folder: Path,
     board_cfg: Path,
     device_cfg: Path,
+    rectification: Path,
     scale_factor: int,
     save: bool,
 ):
@@ -61,9 +69,11 @@ def calibrate(
         device_cfg = XConfig(device_cfg)
         device = OakDeviceFactory().create(device_cfg)
         keys = ["left", "center", "right"]
-        acquirer = CornerAcquirer(
-            DeviceAcquirer(device), keys, board, scale_factor=scale_factor
-        )
+        acquirer = DeviceAcquirer(device)
+        if rectification is not None:
+            calib = XConfig(filename=rectification)
+            acquirer = RectifiedAcquirer(acquirer, calib)
+        acquirer = CornerAcquirer(acquirer, keys, board, scale_factor=scale_factor)
         dataset = acquirer()
         device.close()
         if save:
@@ -118,6 +128,7 @@ def calibrate(
 @click.option("--max_depth", type=int, default=1000, help="Max depth (mm)")
 @click.option("--max_disparity", type=int, default=64, help="Max disparity")
 @click.option("--max_frames", type=int, default=-1, help="Max number of frames")
+@click.option("--skip", type=int, default=1, help="Skip frames")
 def acquire(
     calibration: Path,
     device_cfg: Path,
@@ -127,6 +138,7 @@ def acquire(
     max_disparity: int,
     max_depth: int,
     max_frames: int,
+    skip: int,
 ):
     if device_cfg is None:
         device_cfg = oakeye.data_folder / "device" / "device.yml"
@@ -149,7 +161,7 @@ def acquire(
             "depth": [0, max_depth],
         },
     )
-    dataset = acquirer(max_frames=max_frames)
+    dataset = acquirer(max_frames=max_frames, skip=skip)
     device.close()
     if output_folder is not None:
         ext_map = {
