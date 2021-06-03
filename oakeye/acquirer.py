@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from sys import flags
 from typing import Dict, Sequence, Tuple
 from itertools import count
 import time
@@ -9,7 +8,6 @@ from pipelime.sequences.samples import Sample
 from oakeye.board import Board
 from oakeye.device import OakDevice
 from oakeye.utils.color_utils import ColorUtils
-from itertools import count
 
 
 class Acquirer(ABC):
