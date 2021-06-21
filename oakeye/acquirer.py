@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from sys import flags
 from typing import Dict, Sequence, Tuple
 from itertools import count
 import time
@@ -23,7 +22,9 @@ class Acquirer(ABC):
     def _stop(self) -> None:
         self._running = False
 
-    def run(self, max_frames: int = -1, max_time: float = -1) -> Sequence[Sample]:
+    def run(
+        self, max_frames: int = -1, max_time: float = -1, skip: int = 1
+    ) -> Sequence[Sample]:
         def _run_condition():
             num_frames_ok = max_frames < 0 or len(samples) < max_frames
             time_ok = max_time < 0 or elapsed < max_time
@@ -33,8 +34,11 @@ class Acquirer(ABC):
         samples = []
         t_start = time.time()
         elapsed = 0
+        c = count()
         while _run_condition():
             sample = self.acquire()
+            if next(c) % skip != 0:
+                sample = None
             if sample is not None:
                 samples.append(sample)
             elapsed = time.time() - t_start
@@ -66,6 +70,7 @@ class GuiAcquirer(Acquirer):
         keys: Sequence[str],
         quit_key: str = "q",
         acquire_key: str = "s",
+        start_key: str = "b",
         scale_factor: int = 2,
         ranges: Dict[str, Tuple[int, int]] = None,
     ) -> None:
@@ -75,10 +80,12 @@ class GuiAcquirer(Acquirer):
         self._acquirer = acquirer
         self._quit_key = quit_key
         self._acquire_key = acquire_key
+        self._start_key = start_key
         self._keys = keys
         self._scale_factor = scale_factor
         self._counter = count()
         self._ranges = ranges
+        self._recording = False
 
     def _show_sample(self, sample: Sample) -> None:
         h, w = sample[self._keys[0]].shape[:2]
@@ -108,11 +115,16 @@ class GuiAcquirer(Acquirer):
 
     def _parse_input(self, sample: Sample) -> Sample:
         res = None
+        acquire_this = False
         c = cv2.waitKey(1)
         if c == ord(self._quit_key):
             self._stop()
             cv2.destroyAllWindows()
         elif c == ord(self._acquire_key) and sample is not None:
+            acquire_this = True
+        elif c == ord(self._start_key) and not self._recording:
+            self._recording = True
+        if self._recording or acquire_this:
             sample.id = next(self._counter)
             print("Saving sample #%d" % sample.id)
             res = sample
@@ -171,7 +183,7 @@ class RectifiedAcquirer(Acquirer):
         dist_l = np.array(calibration["dist_coeff"]["left"])
         dist_c = np.array(calibration["dist_coeff"]["center"])
         dist_r = np.array(calibration["dist_coeff"]["right"])
-        _, rl, rc, rr, proj_r, proj_c, proj_l, *_ = cv2.rectify3Collinear(
+        _, rl, rc, rr, proj_l, proj_c, proj_r, *_ = cv2.rectify3Collinear(
             camera_l,
             dist_l,
             camera_c,

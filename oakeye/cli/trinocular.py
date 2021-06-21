@@ -5,6 +5,7 @@ import click
 from click.exceptions import ClickException
 from pipelime.sequences.writers.filesystem import UnderfolderWriter
 from pipelime.sequences.readers.filesystem import UnderfolderReader
+from pipelime.sequences.samples import SamplesSequence
 import oakeye
 from oakeye.device import OakDeviceFactory
 from oakeye.board import Board
@@ -36,6 +37,13 @@ def trinocular():
     "-d", "--device_cfg", type=Path, default=None, help="Path to device config file"
 )
 @click.option(
+    "-r",
+    "--rectification",
+    type=Path,
+    default=None,
+    help="Path to calibration config file to calibrate with rectified images, works only with new acquired images",
+)
+@click.option(
     "-s", "--scale_factor", type=int, default=1, help="Downsampling preview factor"
 )
 @click.option("-S", "--save", is_flag=True, help="Also save calibration dataset")
@@ -44,6 +52,7 @@ def calibrate(
     output_folder: Path,
     board_cfg: Path,
     device_cfg: Path,
+    rectification: Path,
     scale_factor: int,
     save: bool,
 ):
@@ -61,9 +70,11 @@ def calibrate(
         device_cfg = XConfig(device_cfg)
         device = OakDeviceFactory().create(device_cfg)
         keys = ["left", "center", "right"]
-        acquirer = CornerAcquirer(
-            DeviceAcquirer(device), keys, board, scale_factor=scale_factor
-        )
+        acquirer = DeviceAcquirer(device)
+        if rectification is not None:
+            calib = XConfig(filename=rectification)
+            acquirer = RectifiedAcquirer(acquirer, calib)
+        acquirer = CornerAcquirer(acquirer, keys, board, scale_factor=scale_factor)
         dataset = acquirer()
         device.close()
         if save:
@@ -81,7 +92,7 @@ def calibrate(
                 d["device"] = device_cfg.to_dict()
             UnderfolderWriter(
                 output_folder, root_files_keys=root_files, extensions_map=ext_map
-            )(dataset)
+            )(SamplesSequence(dataset))
     else:
         dataset = UnderfolderReader(input_folder)
 
@@ -114,15 +125,21 @@ def calibrate(
 @click.option(
     "-s", "--scale_factor", type=int, default=1, help="Downsampling preview factor"
 )
+@click.option("--disparity", is_flag=True, help="Also acquire disparity")
 @click.option("--max_depth", type=int, default=1000, help="Max depth (mm)")
 @click.option("--max_disparity", type=int, default=64, help="Max disparity")
+@click.option("--max_frames", type=int, default=-1, help="Max number of frames")
+@click.option("--skip", type=int, default=1, help="Skip frames")
 def acquire(
     calibration: Path,
     device_cfg: Path,
     output_folder: Path,
     scale_factor: int,
+    disparity: bool,
     max_disparity: int,
     max_depth: int,
+    max_frames: int,
+    skip: int,
 ):
     if device_cfg is None:
         device_cfg = oakeye.data_folder / "device" / "device.yml"
@@ -133,6 +150,7 @@ def acquire(
     if calibration is not None:
         calib = XConfig(calibration)
         acquirer = RectifiedAcquirer(acquirer, calib)
+    if disparity:
         acquirer = DisparityAcquirer(acquirer, disp_diff=max_disparity)
     acquirer = GuiAcquirer(
         acquirer,
@@ -144,7 +162,7 @@ def acquire(
             "depth": [0, max_depth],
         },
     )
-    dataset = acquirer()
+    dataset = acquirer(max_frames=max_frames, skip=skip)
     device.close()
     if output_folder is not None:
         ext_map = {
@@ -161,7 +179,7 @@ def acquire(
             d["device"] = device_cfg.to_dict()
         UnderfolderWriter(
             output_folder, root_files_keys=root_files, extensions_map=ext_map
-        )(dataset)
+        )(SamplesSequence(dataset))
 
 
 trinocular.add_command(calibrate)

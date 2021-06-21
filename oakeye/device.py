@@ -7,6 +7,7 @@ from schema import Schema
 import depthai as dai
 from choixe.configurations import XConfig
 from pipelime.sequences.samples import PlainSample, Sample
+import numpy as np
 
 
 class SyncSystem:
@@ -39,16 +40,49 @@ class SyncSystem:
             self.collect_garbage()
         return results
 
-    def is_ready(self) -> bool:
-        for key in self.seq_packets:
-            if self.has_keys(self.seq_packets[key], self._allowed_instances):
-                return True
-        return False
-
     def collect_garbage(self):
         for key in list(self.seq_packets.keys()):
             if key <= self.last_synced_seq:
                 del self.seq_packets[key]
+
+
+class TimeSyncSystem:
+    def __init__(self, allowed_instances: Sequence[int]):
+        self._allowed_instances = allowed_instances
+        self._in_packets = {x: [] for x in self._allowed_instances}
+
+    def has_keys(self, obj, keys):
+        return all(stream in obj for stream in keys)
+
+    def add_packet(self, packet):
+        self._in_packets[packet.getInstanceNum()].append(packet)
+
+    def get_synced(self):
+        results = []
+        f = {x: len(self._in_packets[x]) for x in self._in_packets}
+        if not all([x > 0 for x in f.values()]):
+            return results
+        most_f = [k for k, v in f.items() if v == max(f.values())][0]
+        tss = {
+            x: np.array([p.getTimestamp() for p in self._in_packets[x]])
+            for x in self._allowed_instances
+        }
+        for p in self._in_packets[most_f]:
+            synced = {most_f: p}
+            for x in self._allowed_instances:
+                if x != most_f and f[x] > 0:
+                    diffs = np.abs(tss[x] - p.getTimestamp())
+                    nearest_idx = np.argmin(diffs)
+                    nearest = self._in_packets[x][nearest_idx]
+                    synced.update({x: nearest})
+            if self.has_keys(synced, self._allowed_instances):
+                results.append(synced)
+        if len(results) > 0:
+            self.collect_garbage(results)
+        return results
+
+    def collect_garbage(self, results):
+        self._in_packets = {x: [results[-1][x]] for x in self._allowed_instances}
 
 
 class OakDevice:
@@ -62,7 +96,8 @@ class OakDevice:
     def __init__(self, device: dai.Device, maxsize: int = 4, focus: int = 0) -> None:
         self._device = device
         names = self._device.getOutputQueueNames()
-        self._syncing = SyncSystem([self.REV_KEY_MAPPING[x] for x in names])
+        # self._syncing = SyncSystem([self.REV_KEY_MAPPING[x] for x in names])
+        self._syncing = TimeSyncSystem([self.REV_KEY_MAPPING[x] for x in names])
         self._queues = [
             self._device.getOutputQueue(name=x, maxSize=maxsize, blocking=False)
             for x in names
