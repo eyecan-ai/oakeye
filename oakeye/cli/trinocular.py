@@ -5,6 +5,7 @@ import click
 from click.exceptions import ClickException
 from pipelime.sequences.writers.filesystem import UnderfolderWriter
 from pipelime.sequences.readers.filesystem import UnderfolderReader
+from pipelime.sequences.samples import SamplesSequence
 import oakeye
 from oakeye.device import OakDeviceFactory
 from oakeye.board import Board
@@ -91,7 +92,7 @@ def calibrate(
                 d["device"] = device_cfg.to_dict()
             UnderfolderWriter(
                 output_folder, root_files_keys=root_files, extensions_map=ext_map
-            )(dataset)
+            )(SamplesSequence(dataset))
     else:
         dataset = UnderfolderReader(input_folder)
 
@@ -178,7 +179,7 @@ def acquire(
             d["device"] = device_cfg.to_dict()
         UnderfolderWriter(
             output_folder, root_files_keys=root_files, extensions_map=ext_map
-        )(dataset)
+        )(SamplesSequence(dataset))
 
 
 trinocular.add_command(calibrate)
