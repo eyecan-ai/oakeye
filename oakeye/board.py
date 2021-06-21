@@ -162,7 +162,10 @@ class Board(ABC, Spook):
         return cv2.cornerSubPix(img, corners, (K, K), (-1, -1), criteria=criteria)
 
     def to_dict(self) -> dict:
-        return {"square_size": self._square_size, "pattern_size": list(self._pattern_size)}
+        return {
+            "square_size": self._square_size,
+            "pattern_size": list(self._pattern_size),
+        }
 
 
 class Chessboard(Board):
@@ -235,6 +238,7 @@ class Charuco(Board):
         self._board = cv2.aruco.CharucoBoard_create(
             *pattern_size, square_size, marker_size, self._dict_ptr
         )
+        self._total_corners = (self._pattern_size[0] - 1) * (self._pattern_size[1] - 1)
 
     def obj_points(self) -> np.ndarray:
         corner_w, corner_h = self._pattern_size
@@ -246,12 +250,20 @@ class Charuco(Board):
         return objp
 
     def _detect_corners(self, img: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        corners, ids, _ = cv2.aruco.detectMarkers(img, self._dict_ptr)
+        corners, ids, rejected = cv2.aruco.detectMarkers(img, self._dict_ptr)
         ret = len(corners) != 0
         if ret:
+            corners, ids, rejected, _ = cv2.aruco.refineDetectedMarkers(
+                img, self._board, corners, ids, rejected
+            )
+
             ret, corners, ids = cv2.aruco.interpolateCornersCharuco(
                 corners, ids, img, self._board
             )
+
+            if corners is not None and len(corners) != self._total_corners:
+                corners = None
+                ids = None
         else:
             corners = None
             ids = None
