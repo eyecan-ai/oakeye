@@ -1,6 +1,6 @@
 __spook__: Charuco
 args:
-    pattern_size: [5, 7]
-    square_size: 0.04
-    marker_size: 0.03
-    dictionary: "DICT_6X6_250"
+    pattern_size: [18, 12]
+    square_size: 0.015
+    marker_size: 0.011
+    dictionary: "DICT_4X4_1000"
