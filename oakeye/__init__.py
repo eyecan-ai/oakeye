@@ -4,6 +4,6 @@ from pathlib import Path
 
 __author__ = """Federico Domeniconi"""
 __email__ = "federicodomeniconi@gmail.com"
-__version__ = "0.1.0"
+__version__ = '0.1.0'
 
 data_folder = Path(__file__).parent / "data"
