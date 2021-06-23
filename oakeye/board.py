@@ -253,9 +253,9 @@ class Charuco(Board):
         corners, ids, rejected = cv2.aruco.detectMarkers(img, self._dict_ptr)
         ret = len(corners) != 0
         if ret:
-            corners, ids, rejected, _ = cv2.aruco.refineDetectedMarkers(
-                img, self._board, corners, ids, rejected
-            )
+            # corners, ids, rejected, _ = cv2.aruco.refineDetectedMarkers(
+            #     img, self._board, corners, ids, rejected
+            # )
 
             ret, corners, ids = cv2.aruco.interpolateCornersCharuco(
                 corners, ids, img, self._board
