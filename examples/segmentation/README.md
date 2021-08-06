@@ -1,4 +1,4 @@
-# Auto Labels Generation pipeline
+# Auto Labels Generation Pipeline
 
 Automatically segment objects lying on a plane in order to generate *BoundingBoxes* and *Masks* labels, given:
 - An RGB image
