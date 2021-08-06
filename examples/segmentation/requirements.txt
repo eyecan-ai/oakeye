@@ -1,0 +1,13 @@
+pip==21.2.3
+setuptools==57.4.0
+click==8.0.1
+numpy==1.19.0
+open3d==0.13.0
+scikit-learn==0.24.2
+matplotlib==3.4.2
+matplotlib-inline==0.1.2
+imageio==2.9.0
+choixe
+opencv-python==4.5.3.56
+rich
+screeninfo
