@@ -1,5 +1,5 @@
 ======
-oakeye
+Oakeye
 ======
 
 
@@ -20,24 +20,11 @@ Oak Device calibration and acquisition tools.
 https://opencv.org/opencv-ai-competition-2021/
 
 
-* Free software: GNU General Public License v3
+.. contents:: **What you can do?**
 
---------
-Features
---------
 
-* Trinocular Camera Calibration
-* Dataset Acquisition with rectified images, disparity and sensor depth.
-
------
-Usage
------
-
-All input and output datasets are stored using the **Underfolder** format.
-See `Pipelime`_ for more info.
-
-Calibration
------------
+Trinocular Calibration
+----------------------
 
 Perform trinocular calibration with the following command:
 
@@ -63,8 +50,11 @@ Where ``OPTIONS`` include:
 
 Calibration results are stored in a file named ``calibration.yml`` inside ``$OUTPUT_FOLDER``.
 
-Acquisition
------------
+All input and output datasets are stored using the **Underfolder** format.
+See `Pipelime`_ for more info.
+
+Time-synch Trinocular Live Acquisition
+--------------------------------------
 
 Acquire images from the sensor with the following command:
 
@@ -86,3 +76,15 @@ Where ``OPTIONS`` include:
 
 .. _`Pipelime`: https://github.com/eyecan-ai/pipelime
 
+All input and output datasets are stored using the **Underfolder** format.
+See `Pipelime`_ for more info.
+
+Auto Labels Generation Pipeline
+-------------------------------
+
+`See the following example <https://github.com/eyecan-ai/oakeye/tree/2d9c82f24b816b85de68ad8208fb04408d98c9ee/examples/segmentation>`_
+
+Issues
+------
+
+If you have problems (i.e. the application crash or the camera are not synchronized) install the branch develop of depthai (https://github.com/luxonis/depthai-python).
