@@ -28,7 +28,7 @@ To execute the example, run the following command:
 
 ```bash
 python segment.py --images example_data/images \
-                  --disparities example_data/disparities \ 
+                  --disparities example_data/disparities \
                   --calibration example_data/calibration.yml
 ```
 
