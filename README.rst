@@ -26,12 +26,10 @@ https://opencv.org/opencv-ai-competition-2021/
 Features
 --------
 
-* Trinocular Camera Calibration
-* Dataset Acquisition with rectified images, disparity and sensor depth.
+* :ref:`Trinocular Camera Calibration <Calibration>`.
+* :ref:`Dataset Acquisition <Acquisition>` with rectified images, disparity and sensor depth.
+* Automatic :ref:`Segmentation example <Segmentation Example>`.
 
------
-Usage
------
 
 All input and output datasets are stored using the **Underfolder** format.
 See `Pipelime`_ for more info.
@@ -85,6 +83,11 @@ Where ``OPTIONS`` include:
 - ``--max_disparity INTEGER`` - Max value of the disparities, defaults to ``64``
 
 .. _`Pipelime`: https://github.com/eyecan-ai/pipelime
+
+Segmentation Example
+--------------------
+
+See the example readme file in ``examples/segmentation``
 
 ----
 Note
