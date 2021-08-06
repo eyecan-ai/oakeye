@@ -1,5 +1,5 @@
 ======
-oakeye
+Oakeye
 ======
 
 
@@ -22,20 +22,16 @@ https://opencv.org/opencv-ai-competition-2021/
 
 * Free software: GNU General Public License v3
 
---------
-Features
---------
-
-* :ref:`Trinocular Camera Calibration <Calibration>`.
-* :ref:`Dataset Acquisition <Acquisition>` with rectified images, disparity and sensor depth.
-* Automatic :ref:`Segmentation example <Segmentation Example>`.
-
+.. contents:: Table of Contents
 
 All input and output datasets are stored using the **Underfolder** format.
 See `Pipelime`_ for more info.
 
-Calibration
------------
+
+**NOTE**: If you have problems (i.e. the application crash or the camera are not synchronized) install the branch develop of depthai (https://github.com/luxonis/depthai-python).
+
+Trinocular Calibration
+----------------------
 
 Perform trinocular calibration with the following command:
 
@@ -89,8 +85,3 @@ Segmentation Example
 
 See the example readme file in ``examples/segmentation``
 
-----
-Note
-----
-
-If you have problems (i.e. the application crash or the camera are not synchronized) install the branch develop of depthai (https://github.com/luxonis/depthai-python).
