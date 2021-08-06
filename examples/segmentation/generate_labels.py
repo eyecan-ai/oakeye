@@ -1,6 +1,7 @@
-from typing import List, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple
 from pathlib import Path
 import click
+from matplotlib.colors import ListedColormap
 import numpy as np
 import open3d as o3d
 import cv2
@@ -91,7 +92,7 @@ class Segmenter(object):
         num_iterations: int,
         offset: float,
         offset_up: float,
-    ) -> np.ndarray:
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """Filters the pointcloud by keeping only the points above the estimated plane
 
         :param distance_threshold: RANSAC plane estimation, max distance a point
@@ -106,14 +107,13 @@ class Segmenter(object):
         :type offset: float
         :param offset_up: remove points that are further away to the plane than specified
         :type offset_up: float
-        :return: depth mask of valid points
-        :rtype: np.ndarray
+        :return: (depth mask of valid points, inliers indices)
+        :rtype: Tuple[np.ndarray, np.ndarray]
         """
 
         self.plane, inliers = self.pc.segment_plane(
             distance_threshold, ransac_n, num_iterations
         )
-        self.viz_plane(self.pc, inliers)
 
         pc_numpy = np.array(self.pc.points)
         a, b, c, d = self.plane
@@ -128,7 +128,7 @@ class Segmenter(object):
         plane_mask = np.logical_and(plane_mask1, plane_mask2)
         plane_mask = np.reshape(plane_mask, self.downscaled_depth.shape)
 
-        return plane_mask
+        return plane_mask, inliers
 
     def _cluster_pointcloud(self, eps: float, min_points: int) -> np.ndarray:
         """Clusters the points of the pointcloud
@@ -214,19 +214,49 @@ class Segmenter(object):
         merged_mask = np.amax(instance_masks, axis=2).astype(np.uint8)
         return merged_mask
 
-    def _color_segmentation_mask(self, mask: np.ndarray) -> np.ndarray:
+    def _color_segmentation_mask(
+        self, mask: np.ndarray, map_type: Optional[str] = None
+    ) -> np.ndarray:
         """Colors the segmentation mask
 
         :param mask: segmentation mask [H x W]
         :type mask: np.ndarray
+        :param map_type: map type (e.g. 'objects')
+        :type map_type: Optional[str]
         :return: colored segmentation mask [H x W x 3]
         :rtype: np.ndarray
         """
 
-        cmap = cm.get_cmap("tab20")
-        mask = mask.astype(np.float32) - 1
+        if map_type is None:
+            map_type = "objects"
+
+        if map_type == "objects":
+            colors = np.array(
+                [
+                    [66, 66, 66],
+                    [239, 83, 80],
+                    [66, 165, 245],
+                    [76, 175, 80],
+                    [255, 235, 59],
+                    [156, 39, 176],
+                ]
+            )
+
+        elif map_type == "plane":
+            colors = np.array(
+                [
+                    [239, 83, 80],
+                    [66, 66, 66],
+                ]
+            )
+
+        colors = colors / 255.0
+        n_colors = colors.shape[0]
+
+        cmap = ListedColormap(colors)
+        mask = mask.astype(np.float32)
         foreground = np.expand_dims(mask >= 0, -1)
-        mask = (mask % 20) / 20
+        mask = (mask % n_colors) / n_colors
         mask = cmap(mask)[:, :, :3]
         mask = (mask * foreground * 255).astype(np.uint8)
         return mask
@@ -285,15 +315,16 @@ class Segmenter(object):
         :param min_area: Minimum mask area relative to image size
         :type min_area: float
         :return: segmentation mask, colored segmentation mask, crops
-        :rtype: Tuple[np.ndarray, np.ndarray, Tuple[np.ndarray]]
+        :rtype: dict
         """
 
         H, W = self.depth.shape
         self.pc, self.pc_full = self._load_pointclouds()
         valid_depth_mask = self.downscaled_depth > 0
-        plane_mask = self._filter_pointcloud(
+        plane_mask, plane_inliers = self._filter_pointcloud(
             distance_threshold, ransac_n, num_iterations, offset, offset_up
         )
+
         valid_depth_mask *= plane_mask
         labels = self._cluster_pointcloud(eps, min_points)
         seg_masks = self._generate_instance_masks(valid_depth_mask, labels)
@@ -320,69 +351,95 @@ class Segmenter(object):
             final_mask = np.zeros_like(valid_depth_mask).astype(np.uint8)
         else:
             final_mask = self._merge_instance_masks(seg_masks)
-        colored_final_mask = self._color_segmentation_mask(final_mask)
+        colored_final_mask = self._color_segmentation_mask(
+            final_mask, map_type="objects"
+        )
+
+        plane_mask = final_mask.copy()
+        plane_mask[plane_mask > 0] = 1
+        colored_plane_mask = self._color_segmentation_mask(plane_mask, map_type="plane")
+
         final_mask = cv2.resize(final_mask, (W, H), interpolation=cv2.INTER_NEAREST)
         colored_final_mask = cv2.resize(
             colored_final_mask, (W, H), interpolation=cv2.INTER_NEAREST
         )
-        return final_mask, colored_final_mask, crops
-
-    def stack_output(
-        self,
-        image: np.ndarray,
-        segmentation_mask: np.ndarray,
-        crops: List[float],
-        alpha: float = 0.5,
-    ) -> np.ndarray:
-        """Stacks the outputs in a single image
-
-        :param image: input image [H x W] or [H x W x 3]
-        :type image: np.ndarray
-        :param segmentation_mask: input segmentation mask [H x W]
-        :type segmentation_mask: np.ndarray
-        :param alpha: coefficient to blend the image and the segmentation mask, defaults to 0.5
-        :type alpha: float, optional
-        :return: output image [H x W x 3]
-        :rtype: np.ndarray
-        """
-
-        if len(image.shape) == 2:
-            image = np.repeat(image[:, :, np.newaxis], 3, axis=2)
-        blended = (alpha * segmentation_mask + (1 - alpha) * image).astype(np.uint8)
-
-        for bbox in crops:
-            x, y, w, h = bbox
-            cv2.rectangle(
-                blended, (x, y), (x + w, y + h), color=(255, 0, 0), thickness=2
-            )
-
-        output = np.concatenate([image, segmentation_mask, blended], axis=1)
-        return output
-
-    def viz_plane(
-        self,
-        point_cloud: np.ndarray,
-        inliers: Sequence[int] = None,
-        plane_color: Sequence[float] = [1.0, 0.0, 0.0],
-    ):
-        mesh = o3d.geometry.TriangleMesh.create_coordinate_frame(
-            size=0.1, origin=np.array([0, 0, 0])
+        colored_plane_mask = cv2.resize(
+            colored_plane_mask, (W, H), interpolation=cv2.INTER_NEAREST
         )
-        print("Visualizing point cloud. Press Q to continue.")
-        if inliers is None:
-            o3d.visualization.draw_geometries([point_cloud, mesh])
-        else:
-            inlier_cloud = point_cloud.select_by_index(inliers)
-            inlier_cloud.paint_uniform_color(plane_color)
-            outlier_cloud = point_cloud.select_by_index(inliers, invert=True)
-            o3d.visualization.draw_geometries([inlier_cloud, outlier_cloud, mesh])
+
+        return {
+            "final_mask": final_mask,
+            "colored_final_mask": colored_final_mask,
+            "colored_plane_mask": colored_plane_mask,
+            "crops": crops,
+            "full_point_cloud": self.pc_full,
+            "plane_inliers": plane_inliers,
+        }
 
 
-@click.command("segment")
-@click.option("--images", type=Path, required=True, help="Images folder path")
-@click.option("--disparities", type=Path, required=True, help="Disparities folder path")
-@click.option("--calibration", type=Path, required=True, help="Calibration file path")
-@click.option("-f", default=2, type=int, help="Scale factor")
+def create_2d_stacked_image(
+    image: np.ndarray,
+    segmentation_mask: np.ndarray,
+    plane_mask: np.ndarray,
+    bounding_boxes: List[float],
+    alpha: float = 0.5,
+) -> np.ndarray:
+
+    if len(image.shape) == 2:
+        image = np.repeat(image[:, :, np.newaxis], 3, axis=2)
+    blended = (alpha * segmentation_mask + (1 - alpha) * image).astype(np.uint8)
+
+    for bbox in bounding_boxes:
+        x, y, w, h = bbox
+        cv2.rectangle(blended, (x, y), (x + w, y + h), color=(255, 0, 0), thickness=2)
+
+    output = np.concatenate([image, plane_mask, segmentation_mask, blended], axis=1)
+    return output
+
+
+def create_3d_visualizer(
+    point_cloud: o3d.geometry.PointCloud,
+    inliers: Sequence[int] = None,
+    visualizer_size: Sequence[int] = [800, 800],
+    plane_color: Sequence[float] = [1.0, 0.0, 0.0],
+) -> o3d.visualization.Visualizer:
+
+    vis = o3d.visualization.VisualizerWithKeyCallback()
+    vis.create_window(
+        width=visualizer_size[0], height=visualizer_size[1], left=0, top=0
+    )
+
+    mesh = o3d.geometry.TriangleMesh.create_coordinate_frame(
+        size=0.1, origin=np.array([0, 0, 0])
+    )
+    if inliers is None:
+        o3d.visualization.draw_geometries([point_cloud, mesh])
+        vis.add_geometry(point_cloud)
+        vis.add_geometry(mesh)
+    else:
+        inlier_cloud = point_cloud.select_by_index(inliers)
+        inlier_cloud.paint_uniform_color(plane_color)
+        outlier_cloud = point_cloud.select_by_index(inliers, invert=True)
+        vis.add_geometry(inlier_cloud)
+        vis.add_geometry(outlier_cloud)
+        vis.add_geometry(mesh)
+
+    # Rotate view around target point cloud
+    view_control = vis.get_view_control()
+    view_control.set_front([0, 0, -1])
+    view_control.set_up([0, -1, 0])
+    view_control.set_zoom(1)
+    view_control.set_lookat(
+        np.array(point_cloud.points).mean(0)
+    )  # LookAt Point Cloud centroid
+    view_control.rotate(visualizer_size[0] / 4.0, -visualizer_size[1] / 4.0)
+
+    return vis
+
+
+@click.command("generate_labels")
+@click.option("--data_folder", type=Path, required=True, help="Data folder path")
+@click.option("-f", "--scale_factor", default=2, type=int, help="Scale factor")
 @click.option(
     "-d",
     "--distance_threshold",
@@ -434,11 +491,9 @@ class Segmenter(object):
     default=0.01,
     help="Minimum mask area relative to image size",
 )
-def segment(
-    images,
-    disparities,
-    calibration,
-    f,
+def generate_labels(
+    data_folder,
+    scale_factor,
     distance_threshold,
     ransac_n,
     num_iterations,
@@ -448,43 +503,94 @@ def segment(
     min_points,
     min_area,
 ):
-    images = sorted(images.iterdir())
-    disparities = sorted(disparities.iterdir())
-    assert len(images) == len(disparities)
-    N = len(images)
 
-    calibration = XConfig(calibration)
+    VISUALIZER_SIZE = [800, 800]
+    try:
+        from screeninfo import get_monitors
+
+        max_height = int(get_monitors()[0].height)
+        max_width = int(get_monitors()[0].width * 0.48)
+        VISUALIZER_SIZE = [max_width, max_height]
+    except:
+        pass
+
+    # Check for filenames
+    image_filename = data_folder / "image.png"
+    disparity_filename = data_folder / "disparity.png"
+    calibration_filename = data_folder / "calibration.yml"
+
+    for _filename in [image_filename, disparity_filename, calibration_filename]:
+        assert _filename.exists(), f"Filename: {str(_filename)} not found!"
+
+    # Load camera calibration data
+    calibration = XConfig(calibration_filename)
     camera_matrix = calibration["camera_matrix"]["center"]
     baseline = calibration["baseline"]["center_right"]
     focal = camera_matrix[0][0]
 
-    for i in range(N):
-        image = images[i]
-        disparity = disparities[i]
-        image = np.array(imageio.imread(image))
-        if len(image.shape) == 2:
-            image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
-        disparity = np.array(imageio.imread(disparity))
-        depth = (baseline * focal / disparity * 1000).astype(np.float32)
-        segmenter = Segmenter(image, depth, camera_matrix, f=f)
-        _, colored_seg_mask, crops = segmenter.segment(
-            distance_threshold,
-            ransac_n,
-            num_iterations,
-            offset,
-            offset_up,
-            eps,
-            min_points,
-            min_area,
-        )
+    # Load image/disparity
+    image = np.array(imageio.imread(str(image_filename)))
+    if len(image.shape) == 2:
+        image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+    disparity = np.array(imageio.imread(str(disparity_filename)))
 
-        out = segmenter.stack_output(image, colored_seg_mask, [x[2] for x in crops])
-        out = cv2.cvtColor(out, cv2.COLOR_RGB2BGR)
-        print(f"Visualizing segmentation results {i+1}/{N}. Press any key to continue.")
-        cv2.namedWindow("output", cv2.WINDOW_NORMAL)
+    # Compute depth from disparity
+    depth = (baseline * focal / disparity * 1000).astype(np.float32)
+
+    # Segmentation Pipeline
+    segmenter = Segmenter(image, depth, camera_matrix, f=scale_factor)
+    segmentation_output = segmenter.segment(
+        distance_threshold,
+        ransac_n,
+        num_iterations,
+        offset,
+        offset_up,
+        eps,
+        min_points,
+        min_area,
+    )
+
+    # Visualization loop control
+    visualization_running = True
+
+    def stop_visualization(event=None):
+        nonlocal visualization_running
+        visualization_running = False
+
+    # Visualize 3D PointCloud with plane segmentation
+    visualizer_3d = create_3d_visualizer(
+        point_cloud=segmentation_output["full_point_cloud"],
+        inliers=segmentation_output["plane_inliers"],
+        visualizer_size=VISUALIZER_SIZE,
+    )
+    visualizer_3d.register_key_callback(81, stop_visualization)
+
+    # Visualize 2D Final Output
+    colored_seg_mask = segmentation_output["colored_final_mask"]
+    plane_seg_mask = segmentation_output["colored_plane_mask"]
+    crops = segmentation_output["crops"]
+    _, _, bounding_boxes = zip(*crops)
+    out = create_2d_stacked_image(
+        image, colored_seg_mask, plane_seg_mask, bounding_boxes
+    )
+    out = cv2.cvtColor(out, cv2.COLOR_RGB2BGR)
+    cv2.namedWindow("output", cv2.WINDOW_NORMAL)
+    cv2.resizeWindow("output", VISUALIZER_SIZE[0], VISUALIZER_SIZE[1])
+    cv2.moveWindow("output", int(VISUALIZER_SIZE[0] * 1.1), 0)
+
+    # Visualization loop
+    while visualization_running:
+        visualizer_3d.poll_events()
+        visualizer_3d.update_renderer()
         cv2.imshow("output", out)
-        cv2.waitKey(0)
+        c = cv2.waitKey(10)
+        if ord("q") == c:
+            stop_visualization()
+
+    # teardown visualizers
+    visualizer_3d.destroy_window()
+    cv2.destroyWindow("output")
 
 
 if __name__ == "__main__":
-    segment()
+    generate_labels()

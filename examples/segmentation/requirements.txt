@@ -9,3 +9,5 @@ matplotlib-inline==0.1.2
 imageio==2.9.0
 choixe
 opencv-python==4.5.3.56
+rich
+screeninfo

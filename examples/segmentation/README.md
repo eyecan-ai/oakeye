@@ -1,36 +1,42 @@
-# Example segmentation script
+# Auto Labels Generation pipeline
 
-Automatically segment object lying on a plane, given:
+Automatically segment objects lying on a plane in order to generate *BoundingBoxes* and *Masks* labels, given:
 - An RGB image
 - Disparity map
 - Calibrated camera
 
-The example script iterates on the inputs images and shows:
-- The reconstructed point cloud
-- The instance segmentation masks and their bounding box.
+The example script explores a target folder (`data_folder`) searching for:
+- `image.png`
+- `disparity.png`
+- `calibration.yml`
 
-Press `Q` to close the point cloud visualization, press any key to close the segmentation masks visualization.
+The visual output will be:
+- The reconstructed point cloud
+- The main plane segmentation within the point cloud
+- The instance segmentation masks and bounding boxes of extracted objects.
 
 ## Installation
 
 To install the required packages, run the following commands. 
 
 ```bash
-cd examples/segmentation
 pip install -r requirements.txt
 ```
 
-**Note**: make sure to use the `requirements.txt` file contained within the `examples/segmentation` directory, not the one located at oakeye root directory.
-
 ## Usage
 
-To execute the example, run the following command:
+To execute the pipeline on samples data, run one of the following command:
 
 ```bash
-python segment.py --images example_data/images \
-                  --disparities example_data/disparities \
-                  --calibration example_data/calibration.yml
+python generate_labels.py --data_folder sample_data/000
+
+python generate_labels.py --data_folder sample_data/001
+
+...
 ```
+
+You can launch the pipeline on your custom data following the sample folders content structure.
+
 
 You can see a list of optional parameters and a brief explanation with:
 
