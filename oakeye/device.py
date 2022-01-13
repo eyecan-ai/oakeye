@@ -185,9 +185,11 @@ class OakDeviceFactory:
         "1080p": dai.ColorCameraProperties.SensorResolution.THE_1080_P,
         "4k": dai.ColorCameraProperties.SensorResolution.THE_4_K,
         "12mp": dai.ColorCameraProperties.SensorResolution.THE_12_MP,
+        "13mp": dai.ColorCameraProperties.SensorResolution.THE_13_MP,
     }
     MONO_CAM_RES_MAP = {
         "400p": dai.MonoCameraProperties.SensorResolution.THE_400_P,
+        "480p": dai.MonoCameraProperties.SensorResolution.THE_480_P,
         "800p": dai.MonoCameraProperties.SensorResolution.THE_800_P,
         "720p": dai.MonoCameraProperties.SensorResolution.THE_720_P,
     }
