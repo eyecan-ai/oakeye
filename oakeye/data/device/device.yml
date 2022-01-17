@@ -1,6 +1,7 @@
 depth: false
 focus: 128
 autofocus: false
+syncing_method: time
 preview_size: [1280, 800]
 resolutions:
     left: 800p

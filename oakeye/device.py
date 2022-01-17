@@ -92,12 +92,18 @@ class OakDevice:
     QUEUE_DEPTH = "depth"
     KEY_MAPPING = {0: "center", 1: "left", 2: "right", 3: "depth"}
     REV_KEY_MAPPING = {v: k for k, v in KEY_MAPPING.items()}
+    SYNC_METHODS_MAP = {"id": SyncSystem, "time": TimeSyncSystem}
 
-    def __init__(self, device: dai.Device, maxsize: int = 4, focus: int = 0) -> None:
+    def __init__(
+        self, device: dai.Device, maxsize: int = 4, focus: int = 0, syncing_method="id"
+    ) -> None:
         self._device = device
         names = self._device.getOutputQueueNames()
         # self._syncing = SyncSystem([self.REV_KEY_MAPPING[x] for x in names])
-        self._syncing = TimeSyncSystem([self.REV_KEY_MAPPING[x] for x in names])
+        # self._syncing = TimeSyncSystem([self.REV_KEY_MAPPING[x] for x in names])
+        self._syncing = self.SYNC_METHODS_MAP[syncing_method](
+            [self.REV_KEY_MAPPING[x] for x in names]
+        )
         self._queues = [
             self._device.getOutputQueue(name=x, maxSize=maxsize, blocking=False)
             for x in names
@@ -268,4 +274,4 @@ class OakDeviceFactory:
         device.startPipeline()
         device.setLogLevel(dai.LogLevel.DEBUG)
 
-        return OakDevice(device, focus=cfg.focus)
+        return OakDevice(device, focus=cfg.focus, syncing_method=cfg.syncing_method)
