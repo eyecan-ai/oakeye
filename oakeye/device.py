@@ -92,12 +92,18 @@ class OakDevice:
     QUEUE_DEPTH = "depth"
     KEY_MAPPING = {0: "center", 1: "left", 2: "right", 3: "depth"}
     REV_KEY_MAPPING = {v: k for k, v in KEY_MAPPING.items()}
+    SYNC_METHODS_MAP = {"id": SyncSystem, "time": TimeSyncSystem}
 
-    def __init__(self, device: dai.Device, maxsize: int = 4, focus: int = 0) -> None:
+    def __init__(
+        self, device: dai.Device, maxsize: int = 4, focus: int = 0, syncing_method="id"
+    ) -> None:
         self._device = device
         names = self._device.getOutputQueueNames()
         # self._syncing = SyncSystem([self.REV_KEY_MAPPING[x] for x in names])
-        self._syncing = TimeSyncSystem([self.REV_KEY_MAPPING[x] for x in names])
+        # self._syncing = TimeSyncSystem([self.REV_KEY_MAPPING[x] for x in names])
+        self._syncing = self.SYNC_METHODS_MAP[syncing_method](
+            [self.REV_KEY_MAPPING[x] for x in names]
+        )
         self._queues = [
             self._device.getOutputQueue(name=x, maxSize=maxsize, blocking=False)
             for x in names
@@ -185,9 +191,11 @@ class OakDeviceFactory:
         "1080p": dai.ColorCameraProperties.SensorResolution.THE_1080_P,
         "4k": dai.ColorCameraProperties.SensorResolution.THE_4_K,
         "12mp": dai.ColorCameraProperties.SensorResolution.THE_12_MP,
+        "13mp": dai.ColorCameraProperties.SensorResolution.THE_13_MP,
     }
     MONO_CAM_RES_MAP = {
         "400p": dai.MonoCameraProperties.SensorResolution.THE_400_P,
+        "480p": dai.MonoCameraProperties.SensorResolution.THE_480_P,
         "800p": dai.MonoCameraProperties.SensorResolution.THE_800_P,
         "720p": dai.MonoCameraProperties.SensorResolution.THE_720_P,
     }
@@ -266,4 +274,4 @@ class OakDeviceFactory:
         device.startPipeline()
         device.setLogLevel(dai.LogLevel.DEBUG)
 
-        return OakDevice(device, focus=cfg.focus)
+        return OakDevice(device, focus=cfg.focus, syncing_method=cfg.syncing_method)
