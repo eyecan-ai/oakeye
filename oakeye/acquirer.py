@@ -176,7 +176,7 @@ class RectifiedAcquirer(Acquirer):
         self._calibration = calibration
         flags = 0
         flags |= cv2.CALIB_FIX_INTRINSIC
-        size = tuple(calibration["image_size"]["left"][::-1])
+        w, h = tuple(calibration["image_size"]["left"][::-1])
         camera_l = np.array(calibration["camera_matrix"]["left"])
         camera_c = np.array(calibration["camera_matrix"]["center"])
         camera_r = np.array(calibration["camera_matrix"]["right"])
@@ -192,23 +192,23 @@ class RectifiedAcquirer(Acquirer):
             dist_r,
             None,
             None,
-            size,
+            (h, w),
             np.array(calibration["rotation"]["left_center"]),
             np.array(calibration["translation"]["left_center"]),
             np.array(calibration["rotation"]["left_right"]),
             np.array(calibration["translation"]["left_right"]),
             0,
-            size,
+            (h, w),
             flags=flags,
         )
         self._map_l = cv2.initUndistortRectifyMap(
-            camera_l, dist_l, rl, proj_l, size, cv2.CV_32F
+            camera_l, dist_l, rl, proj_l, (h, w), cv2.CV_32F
         )
         self._map_c = cv2.initUndistortRectifyMap(
-            camera_c, dist_c, rc, proj_c, size, cv2.CV_32F
+            camera_c, dist_c, rc, proj_c, (h, w), cv2.CV_32F
         )
         self._map_r = cv2.initUndistortRectifyMap(
-            camera_r, dist_r, rr, proj_r, size, cv2.CV_32F
+            camera_r, dist_r, rr, proj_r, (h, w), cv2.CV_32F
         )
 
     def acquire(self) -> Sample:
