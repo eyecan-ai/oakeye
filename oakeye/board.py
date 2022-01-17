@@ -114,6 +114,10 @@ class Board(ABC, Spook):
             2: "right",
         }
         baselines = [np.linalg.norm(x).item() for x in t_pairs]
+
+        HL, WL = left_imgs[0].shape[:2]
+        HC, WC = center_imgs[0].shape[:2]
+        HR, WR = right_imgs[0].shape[:2]
         return {
             "camera_matrix": {key_remap[i]: x.tolist() for i, x in enumerate(new_mtx)},
             "dist_coeff": {key_remap[i]: x.tolist() for i, x in enumerate(dist)},
@@ -131,9 +135,9 @@ class Board(ABC, Spook):
                 "left_right": t_pairs[1],
             },
             "image_size": {
-                "left": left_imgs[0].shape[:2],
-                "center": center_imgs[0].shape[:2],
-                "right": right_imgs[0].shape[:2],
+                "left": [WL, HL],
+                "center": [WC, HC],
+                "right": [WR, HR],
             },
         }
 
