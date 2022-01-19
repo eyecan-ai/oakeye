@@ -5,6 +5,7 @@ import time
 import cv2
 import numpy as np
 from pipelime.sequences.samples import Sample
+from pipelime.sequences.readers.filesystem import UnderfolderReader
 from oakeye.board import Board
 from oakeye.device import OakDevice
 from oakeye.utils.color_utils import ColorUtils
@@ -63,6 +64,22 @@ class DeviceAcquirer(Acquirer):
         return self._device.grab()
 
 
+class UnderfolderAcquirer(Acquirer):
+    def __init__(self, dataset: UnderfolderReader) -> None:
+        super().__init__()
+        self._dataset = dataset
+        self._index = 0
+
+    def acquire(self) -> Sample:
+        # stop when loading last sample
+        if self._index == len(self._dataset) - 1:
+            self._stop()
+        if self._index < len(self._dataset):
+            sample = self._dataset[self._index]
+            self._index += 1
+            return sample
+
+
 class GuiAcquirer(Acquirer):
     def __init__(
         self,
@@ -101,6 +118,7 @@ class GuiAcquirer(Acquirer):
                 img = np.clip(img, m, M)
                 img = ((img - m) / (M - m) * 255).astype(np.uint8)
                 img = cv2.applyColorMap(img, cv2.COLORMAP_INFERNO)
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
             if len(img.shape) == 3:
                 img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
@@ -170,10 +188,16 @@ class RectifiedAcquirer(Acquirer):
         self,
         acquirer: Acquirer,
         calibration: Dict,
+        rect_left_key: str = "left",
+        rect_center_key: str = "center",
+        rect_right_key: str = "right",
     ) -> None:
         super().__init__()
         self._acquirer = acquirer
         self._calibration = calibration
+        self._rect_left_key = rect_left_key
+        self._rect_center_key = rect_center_key
+        self._rect_right_key = rect_right_key
         flags = 0
         flags |= cv2.CALIB_FIX_INTRINSIC
         w, h = tuple(calibration["image_size"]["left"][::-1])
@@ -213,9 +237,20 @@ class RectifiedAcquirer(Acquirer):
 
     def acquire(self) -> Sample:
         sample = self._acquirer.acquire()
-        sample["left"] = cv2.remap(sample["left"], *self._map_l, cv2.INTER_LINEAR)
-        sample["center"] = cv2.remap(sample["center"], *self._map_c, cv2.INTER_LINEAR)
-        sample["right"] = cv2.remap(sample["right"], *self._map_r, cv2.INTER_LINEAR)
+
+        if sample is None:
+            self._stop()
+            return
+
+        sample[self._rect_left_key] = cv2.remap(
+            sample["left"], *self._map_l, cv2.INTER_LINEAR
+        )
+        sample[self._rect_center_key] = cv2.remap(
+            sample["center"], *self._map_c, cv2.INTER_LINEAR
+        )
+        sample[self._rect_right_key] = cv2.remap(
+            sample["right"], *self._map_r, cv2.INTER_LINEAR
+        )
 
         return sample
 

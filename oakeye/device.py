@@ -252,7 +252,7 @@ class OakDeviceFactory:
                 dai.StereoDepthProperties.MedianFilter.MEDIAN_OFF
             )
             stereo_camera.setLeftRightCheck(True)
-            stereo_camera.setExtendedDisparity(False)
+            stereo_camera.setExtendedDisparity(True)
             stereo_camera.setSubpixel(False)
 
             # Link LEFT/RIGHT -> STEREO

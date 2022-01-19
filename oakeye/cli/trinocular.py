@@ -15,6 +15,7 @@ from oakeye.acquirer import (
     GuiAcquirer,
     RectifiedAcquirer,
     DisparityAcquirer,
+    UnderfolderAcquirer,
 )
 
 
@@ -91,7 +92,10 @@ def calibrate(
                 d["board"] = board.serialize()
                 d["device"] = device_cfg.to_dict()
             UnderfolderWriter(
-                output_folder, root_files_keys=root_files, extensions_map=ext_map
+                output_folder,
+                root_files_keys=root_files,
+                extensions_map=ext_map,
+                num_workers=-1,
             )(SamplesSequence(dataset))
     else:
         dataset = UnderfolderReader(input_folder)
@@ -178,12 +182,62 @@ def acquire(
         for d in dataset:
             d["device"] = device_cfg.to_dict()
         UnderfolderWriter(
-            output_folder, root_files_keys=root_files, extensions_map=ext_map
+            output_folder,
+            root_files_keys=root_files,
+            extensions_map=ext_map,
+            num_workers=-1,
         )(SamplesSequence(dataset))
+
+
+@click.command("rectify")
+@click.option(
+    "-i", "--input_folder", type=Path, required=True, help="Path to input folder"
+)
+@click.option(
+    "-o", "--output_folder", type=Path, required=True, help="Path to output folder"
+)
+@click.option(
+    "-c", "--calibration", type=Path, required=True, help="Path to calibration file"
+)
+def rectify(input_folder, output_folder, calibration):
+
+    dataset = UnderfolderReader(input_folder)
+    acquirer = UnderfolderAcquirer(dataset)
+    calib = XConfig(filename=calibration)
+    rect_keys = {
+        "left": "leftrect",
+        "center": "centerrect",
+        "right": "rightrect",
+    }
+    acquirer = RectifiedAcquirer(
+        acquirer,
+        calib,
+        rect_left_key=rect_keys["left"],
+        rect_center_key=rect_keys["center"],
+        rect_right_key=rect_keys["right"],
+    )
+    samples = acquirer()
+
+    template = dataset.get_reader_template()
+    ext_map = template.extensions_map
+    ext_map.update(
+        {
+            rect_keys["left"]: "png",
+            rect_keys["center"]: "png",
+            rect_keys["right"]: "png",
+        }
+    )
+    UnderfolderWriter(
+        output_folder,
+        root_files_keys=template.root_files_keys,
+        extensions_map=ext_map,
+        num_workers=-1,
+    )(SamplesSequence(samples))
 
 
 trinocular.add_command(calibrate)
 trinocular.add_command(acquire)
+trinocular.add_command(rectify)
 
 if __name__ == "__main__":
     trinocular()
