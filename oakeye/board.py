@@ -120,7 +120,9 @@ class Board(ABC, Spook):
         HR, WR = right_imgs[0].shape[:2]
         return {
             "camera_matrix": {key_remap[i]: x.tolist() for i, x in enumerate(new_mtx)},
-            "dist_coeff": {key_remap[i]: x.tolist() for i, x in enumerate(dist)},
+            "dist_coeff": {
+                key_remap[i]: x.reshape(-1, 1).tolist() for i, x in enumerate(dist)
+            },
             "baseline": {
                 "left_center": baselines[0],
                 "center_right": baselines[1] - baselines[0],
