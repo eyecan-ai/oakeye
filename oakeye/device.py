@@ -220,14 +220,16 @@ class OakDeviceFactory:
             )
 
         # left camera
-        left_camera = pipeline.createMonoCamera()
-        left_camera.setResolution(self.MONO_CAM_RES_MAP[cfg.resolutions.left])
-        left_camera.setBoardSocket(dai.CameraBoardSocket.LEFT)
+        if "left" in cfg.resolutions:
+            left_camera = pipeline.createMonoCamera()
+            left_camera.setResolution(self.MONO_CAM_RES_MAP[cfg.resolutions.left])
+            left_camera.setBoardSocket(dai.CameraBoardSocket.LEFT)
 
         # right camera
-        right_camera = pipeline.createMonoCamera()
-        right_camera.setResolution(self.MONO_CAM_RES_MAP[cfg.resolutions.right])
-        right_camera.setBoardSocket(dai.CameraBoardSocket.RIGHT)
+        if "right" in cfg.resolutions:
+            right_camera = pipeline.createMonoCamera()
+            right_camera.setResolution(self.MONO_CAM_RES_MAP[cfg.resolutions.right])
+            right_camera.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
         # center stream
         center_stream = pipeline.createXLinkOut()
@@ -235,14 +237,16 @@ class OakDeviceFactory:
         center_camera.preview.link(center_stream.input)
 
         # left stream
-        left_stream = pipeline.createXLinkOut()
-        left_stream.setStreamName(OakDevice.QUEUE_LEFT)
-        left_camera.out.link(left_stream.input)
+        if "left" in cfg.resolutions:
+            left_stream = pipeline.createXLinkOut()
+            left_stream.setStreamName(OakDevice.QUEUE_LEFT)
+            left_camera.out.link(left_stream.input)
 
         # right stream
-        right_stream = pipeline.createXLinkOut()
-        right_stream.setStreamName(OakDevice.QUEUE_RIGHT)
-        right_camera.out.link(right_stream.input)
+        if "right" in cfg.resolutions:
+            right_stream = pipeline.createXLinkOut()
+            right_stream.setStreamName(OakDevice.QUEUE_RIGHT)
+            right_camera.out.link(right_stream.input)
 
         if cfg.depth:
             # Stereo camera

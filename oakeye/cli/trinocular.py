@@ -148,6 +148,22 @@ def acquire(
     if device_cfg is None:
         device_cfg = oakeye.data_folder / "device" / "device.yml"
     device_cfg = XConfig(device_cfg)
+    ext_map = {
+        "left": "png",
+        "center": "png",
+        "right": "png",
+        "depth": "png",
+        "disparityCL": "png",
+        "disparityCR": "png",
+        "device": "yml",
+    }
+    root_files = ["device"]
+    writer = UnderfolderWriter(
+        output_folder,
+        root_files_keys=root_files,
+        extensions_map=ext_map,
+    )
+    device_cfg.save_to(output_folder / "device.yml")
     device = OakDeviceFactory().create(device_cfg)
     keys = ["left", "center", "right", "depth", "disparityCL", "disparityCR"]
     acquirer = DeviceAcquirer(device)
@@ -165,28 +181,12 @@ def acquire(
             "disparityCR": [0, max_disparity],
             "depth": [0, max_depth],
         },
+        writer=writer,
     )
     dataset = acquirer(max_frames=max_frames, skip=skip)
     device.close()
-    if output_folder is not None:
-        ext_map = {
-            "left": "png",
-            "center": "png",
-            "right": "png",
-            "depth": "png",
-            "disparityCL": "png",
-            "disparityCR": "png",
-            "device": "yml",
-        }
-        root_files = ["device"]
-        for d in dataset:
-            d["device"] = device_cfg.to_dict()
-        UnderfolderWriter(
-            output_folder,
-            root_files_keys=root_files,
-            extensions_map=ext_map,
-            num_workers=-1,
-        )(SamplesSequence(dataset))
+    if dataset is not None:
+        writer(dataset)
 
 
 @click.command("rectify")

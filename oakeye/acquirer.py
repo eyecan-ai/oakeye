@@ -1,20 +1,30 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Sequence, Tuple
+from typing import Dict, Sequence, Tuple, Union
 from itertools import count
 import time
 import cv2
 import numpy as np
-from pipelime.sequences.samples import Sample
+from pipelime.sequences.samples import Sample, SamplesSequence
 from pipelime.sequences.readers.filesystem import UnderfolderReader
+from pipelime.sequences.writers.filesystem import UnderfolderWriter
 from oakeye.board import Board
 from oakeye.device import OakDevice
 from oakeye.utils.color_utils import ColorUtils
+from multiprocessing import Process, Manager
 
 
 class Acquirer(ABC):
-    def __init__(self) -> None:
+    def __init__(self, writer: UnderfolderWriter = None, n_writers: int = 8) -> None:
         super().__init__()
         self._running = False
+        self._writer = writer
+        if self._writer is not None:
+            self._manager = Manager()
+            self._stop_event = self._manager.Event()
+            self._buffer = self._manager.Queue()
+            self._processes = [Process(target=self._write) for _ in range(n_writers)]
+            for p in self._processes:
+                p.start()
 
     @abstractmethod
     def acquire(self) -> Sample:
@@ -25,7 +35,7 @@ class Acquirer(ABC):
 
     def run(
         self, max_frames: int = -1, max_time: float = -1, skip: int = 1
-    ) -> Sequence[Sample]:
+    ) -> Union[Sequence[Sample], None]:
         def _run_condition():
             num_frames_ok = max_frames < 0 or len(samples) < max_frames
             time_ok = max_time < 0 or elapsed < max_time
@@ -41,17 +51,35 @@ class Acquirer(ABC):
             if next(c) % skip != 0:
                 sample = None
             if sample is not None:
-                samples.append(sample)
-            elapsed = time.time() - t_start
-        return samples
+                if self._writer is not None:
+                    self._buffer.put(sample)
+                else:
+                    samples.append(sample)
 
-    def __call__(self, *args, **kwargs) -> Sequence[Sample]:
+            elapsed = time.time() - t_start
+
+        if self._writer is not None:
+            self._stop_event.set()
+            for p in self._processes:
+                p.join()
+        else:
+            return samples
+
+    def __call__(self, *args, **kwargs) -> Union[Sequence[Sample], None]:
         return self.run(*args, **kwargs)
+
+    def _write(self):
+        while not self._stop_event.is_set() or not self._buffer.empty():
+            if not self._buffer.empty():
+                sample = self._buffer.get(block=False)
+                self._writer(SamplesSequence([sample]))
 
 
 class DeviceAcquirer(Acquirer):
-    def __init__(self, device: OakDevice, warmup: int = 10) -> None:
-        super().__init__()
+    def __init__(
+        self, device: OakDevice, warmup: int = 10, writer: UnderfolderWriter = None
+    ) -> None:
+        super().__init__(writer=writer)
         self._device = device
 
         # Manual focus has issues
@@ -65,8 +93,10 @@ class DeviceAcquirer(Acquirer):
 
 
 class UnderfolderAcquirer(Acquirer):
-    def __init__(self, dataset: UnderfolderReader) -> None:
-        super().__init__()
+    def __init__(
+        self, dataset: UnderfolderReader, writer: UnderfolderWriter = None
+    ) -> None:
+        super().__init__(writer=writer)
         self._dataset = dataset
         self._index = 0
 
@@ -90,8 +120,9 @@ class GuiAcquirer(Acquirer):
         start_key: str = "b",
         scale_factor: int = 2,
         ranges: Dict[str, Tuple[int, int]] = None,
+        writer: UnderfolderWriter = None,
     ) -> None:
-        super().__init__()
+        super().__init__(writer=writer)
         if ranges is None:
             ranges = {}
         self._acquirer = acquirer
@@ -105,7 +136,9 @@ class GuiAcquirer(Acquirer):
         self._recording = False
 
     def _show_sample(self, sample: Sample) -> None:
-        h, w = sample[self._keys[0]].shape[:2]
+        # h, w = sample[self._keys[0]].shape[:2]
+        # TODO: do not use hardcoded key
+        h, w = sample["center"].shape[:2]
         h //= self._scale_factor
         w //= self._scale_factor
         imgs = []
@@ -191,8 +224,9 @@ class RectifiedAcquirer(Acquirer):
         rect_left_key: str = "left",
         rect_center_key: str = "center",
         rect_right_key: str = "right",
+        writer: UnderfolderWriter = None,
     ) -> None:
-        super().__init__()
+        super().__init__(writer=writer)
         self._acquirer = acquirer
         self._calibration = calibration
         self._rect_left_key = rect_left_key
@@ -266,9 +300,10 @@ class DisparityAcquirer(Acquirer):
         disp_smooth: Tuple[int, int] = (16, 32),
         disp12_max_diff: int = 1,
         uniqueness_ratio: int = 10,
+        writer: UnderfolderWriter = None,
     ) -> None:
 
-        super().__init__()
+        super().__init__(writer=writer)
         self._acquirer = acquirer
         self._disp_diff = disp_diff
         self._sgbm = cv2.StereoSGBM_create(
