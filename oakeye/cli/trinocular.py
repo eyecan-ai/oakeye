@@ -162,6 +162,7 @@ def acquire(
         output_folder,
         root_files_keys=root_files,
         extensions_map=ext_map,
+        progress_callback=lambda x: x,
     )
     device_cfg.save_to(output_folder / "device.yml")
     device = OakDeviceFactory().create(device_cfg)
